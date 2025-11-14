@@ -65,6 +65,23 @@ EOF
     )"
 }
 
+get_session_state() {
+    name="$1"
+    state="dne"
+    session=$(
+        zellij list-sessions --no-formatting 2> /dev/null | \
+        grep "$name \["
+    )
+
+    if echo "$session" | grep --quiet "EXITED"; then
+        state="dead"
+    elif [ -n "$session" ]; then
+        state="active"
+    fi
+
+    echo "$state"
+}
+
 call_zellij_switch_plugin() {
     if [ "$#" -lt "1" ]; then
         exit_fail "Session name required!"
@@ -91,11 +108,20 @@ create_command() {
         exit_fail_with_usage "Session name required!" print_create_usage
     fi
 
+    create_command_cwd=$(pwd)
     create_command_name="$1"
-    create_command_path=${2:-}
+    create_command_path=${2:-"$create_command_cwd"}
     create_command_layout=${3:-}
 
-    # TODO: make sure session doesn't exist, otherwise, use attach
+    if ! [ "$(get_session_state "$create_command_name")" = "dne" ]; then
+        exit_fail_with_usage "Session already exists, use attach instead!" # print_attach_usage
+    fi
+
+    if ! [ -d "$create_command_path" ]; then
+        exit_fail "'$create_command_path' is not a directory!"
+    else
+        create_command_path=$(realpath "$create_command_path")
+    fi
 
     if [ "$ZELLIJ" = "0" ]; then
         call_zellij_switch_plugin \
@@ -103,12 +129,8 @@ create_command() {
             "$create_command_path" \
             "$create_command_layout"
     else
-        create_command_cwd=$(pwd)
-
         # pushd and popd are bash builtins and are not POSIX compliant
-        if [ -n "$create_command_path" ] && [ -d "$create_command_path" ]; then
-            cd "$create_command_path"
-        fi
+        cd "$create_command_path"
 
         if [ -n "$layout" ]; then
             zellij --session "$name" --new-session-with-layout "$layout"
@@ -116,9 +138,7 @@ create_command() {
             zellij --session "$name"
         fi
 
-        if [ -n "$create_command_path" ] && [ -d "$create_command_path" ]; then
-            cd "$create_command_cwd"
-        fi
+        cd "$create_command_cwd"
     fi
 }
 
