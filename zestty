@@ -14,14 +14,14 @@ warn()    { printf "\033[33m%s\033[0m\n" "$*" 1>&2; }
 error()   { printf "\033[31m%s\033[0m\n" "$*" 1>&2; }
 
 exit_success() {
-    exit_success_message=${1:-}
-    [ -n "$exit_success_message" ] && success "$1"
+    success_message=${1:-}
+    [ -n "$success_message" ] && success "$1"
     exit 0
 }
 
 exit_fail() {
-    exit_fail_message=${1:-}
-    [ -n "$exit_fail_message" ] && error "$1"
+    fail_message=${1:-}
+    [ -n "$fail_message" ] && error "$1"
     exit 1
 }
 
@@ -89,20 +89,20 @@ EOF
 }
 
 get_session_state() {
-    name="$1"
-    state="dne"
+    session_name="$1"
+    session_state="dne"
     session=$(
         zellij list-sessions --no-formatting 2> /dev/null | \
-        grep "$name \["
+        grep "$session_name \["
     )
 
     if echo "$session" | grep --quiet "EXITED"; then
-        state="dead"
+        session_state="dead"
     elif [ -n "$session" ]; then
-        state="active"
+        session_state="active"
     fi
 
-    echo "$state"
+    echo "$session_state"
 }
 
 call_zellij_switch_plugin() {
@@ -133,31 +133,31 @@ create_command() {
             print_create_usage
     fi
 
-    create_command_cwd=$(pwd)
-    create_command_name="$1"
-    create_command_path=${2:-"$create_command_cwd"}
-    create_command_layout=${3:-}
+    create_cwd=$(pwd)
+    create_name="$1"
+    create_path=${2:-"$create_cwd"}
+    create_layout=${3:-}
 
-    if ! [ "$(get_session_state "$create_command_name")" = "dne" ]; then
+    if ! [ "$(get_session_state "$create_name")" = "dne" ]; then
         exit_fail_with_usage \
-            "'$create_command_name' already exists, use attach instead!" \
+            "'$create_name' already exists, use attach instead!" \
             print_attach_usage
     fi
 
-    if ! [ -d "$create_command_path" ]; then
-        exit_fail "'$create_command_path' is not a directory!"
+    if ! [ -d "$create_path" ]; then
+        exit_fail "'$create_path' is not a directory!"
     else
-        create_command_path=$(realpath "$create_command_path")
+        create_path=$(realpath "$create_path")
     fi
 
     if [ "$ZELLIJ" = "0" ]; then
         call_zellij_switch_plugin \
-            "$create_command_name" \
-            "$create_command_path" \
-            "$create_command_layout"
+            "$create_name" \
+            "$create_path" \
+            "$create_layout"
     else
         # pushd and popd are bash builtins and are not POSIX compliant
-        cd "$create_command_path"
+        cd "$create_path"
 
         if [ -n "$layout" ]; then
             zellij --session "$name" --new-session-with-layout "$layout"
@@ -165,7 +165,7 @@ create_command() {
             zellij --session "$name"
         fi
 
-        cd "$create_command_cwd"
+        cd "$create_cwd"
     fi
 }
 
@@ -176,18 +176,18 @@ attach_command() {
             print_attach_usage
     fi
 
-    attach_command_name="$1"
+    attach_name="$1"
 
-    if [ "$(get_session_state "$attach_command_name")" = "dne" ]; then
+    if [ "$(get_session_state "$attach_name")" = "dne" ]; then
         exit_fail_with_usage \
-            "'$attach_command_name' does not exist, use create instead!" \
+            "'$attach_name' does not exist, use create instead!" \
             print_create_usage
     fi
 
     if [ "$ZELLIJ" = "0" ]; then
-        call_zellij_switch_plugin "$attach_command_name"
+        call_zellij_switch_plugin "$attach_name"
     else
-        zellij attach "$attach_command_name"
+        zellij attach "$attach_name"
     fi
 }
 
