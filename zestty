@@ -3,7 +3,6 @@
 # use strict error handling
 set -eu
 
-
 # if we are not in a zellij session, explicitly set the ZELLIJ environment
 # variable to 1 so that we can use it in conditionals later
 ZELLIJ=${ZELLIJ:-1}
@@ -75,6 +74,20 @@ EOF
     )"
 }
 
+print_list_usage() {
+    echo "$(cat <<EOF
+usage: zestty list [-a] [-d] [-p] [-w] [-s]
+
+$(bold "Options")
+-a, --active        list active zellij sessions
+-d, --dead          list dead zellij sessions
+-p, --projects      list projects from the projects file
+-w, --worktrees     list git worktrees
+-s, --submodules    list git submodules
+EOF
+    )"
+}
+
 get_session_state() {
     name="$1"
     state="dne"
@@ -115,7 +128,9 @@ call_zellij_switch_plugin() {
 
 create_command() {
     if [ "$#" -lt "1" ]; then
-        exit_fail_with_usage "Session name required!" print_create_usage
+        exit_fail_with_usage \
+            "Session name required!" \
+            print_create_usage
     fi
 
     create_command_cwd=$(pwd)
@@ -176,6 +191,87 @@ attach_command() {
     fi
 }
 
+list_active_sessions() {
+    zellij list-sessions --no-formatting 2> /dev/null | \
+    grep --invert-match "EXITED" | \
+    cut --delimiter " " --fields "1"
+}
+
+list_dead_sessions() {
+    zellij list-sessions --no-formatting 2> /dev/null | \
+    grep "EXITED" | \
+    cut --delimiter " " --fields "1"
+}
+
+list_all_sessions() {
+    zellij list-sessions --no-formatting 2> /dev/null | \
+    cut --delimiter " " --fields "1"
+}
+
+list_projects() {
+    :
+}
+
+list_worktrees() {
+    :
+}
+
+list_submodules() {
+    :
+}
+
+list_command() {
+    if [ "$#" -lt "1" ]; then
+        exit_fail_with_usage "" print_list_usage
+    fi
+
+    got_active=1
+    got_dead=1
+    got_projects=1
+    got_worktrees=1
+    got_submodules=1
+    while [ "$#" -ge "1" ]; do
+        case "$1" in
+            "-a" | "--active")
+                got_active=0
+                ;;
+            "-d" | "--dead")
+                got_dead=0
+                ;;
+            "-p" | "--projects")
+                got_projects=0
+                ;;
+            "-w" | "--worktrees")
+                got_worktrees=0
+                ;;
+            "-s" | "--submodules")
+                got_submodules=0
+                ;;
+            *)
+                exit_fail_with_usage \
+                    "Unknown option '$1'" \
+                    print_list_usage
+                ;;
+        esac
+
+        shift
+    done
+
+    if [ "$got_active" = "0" ] && [ "$got_dead" = "0" ]; then
+        list_all_sessions
+    elif [ "$got_active" = "0" ]; then
+        list_active_sessions
+    else
+        list_dead_sessions
+    fi
+
+    [ "$got_projects" = "0" ] && list_projects
+    [ "$got_worktrees" = "0" ] && list_worktrees
+    [ "$got_submodules" = "0" ] && list_submodules
+
+    return 0
+}
+
 # do not proceed if config is invalid
 if ! zellij setup --check 1> /dev/null; then
     exit_fail
@@ -198,6 +294,13 @@ case "$command" in
     "attach")
         attach_command $@
         ;;
+    "list")
+        list_command $@
+        ;;
+    *)
+        exit_fail_with_usage \
+            "Unknown command '$command'" \
+            print_zestty_usage
 esac
 
 exit_success
