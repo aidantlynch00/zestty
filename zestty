@@ -47,7 +47,9 @@ usage: zestty <command>
 
 $(bold "Available commands")
 help        print this message
-create      create a session with a name, layout, and working directory
+create      create a zellij session with a name, layout, and working directory
+attach      attach to an existing zellij session
+list        list things that can be sessionized
 EOF
     )"
 }
@@ -79,8 +81,9 @@ print_list_usage() {
 usage: zestty list [-a] [-d] [-p] [-w] [-s]
 
 $(bold "Options")
--a, --active        list active zellij sessions
--d, --dead          list dead zellij sessions
+-z, --zellij        list all zellij sessions
+-a, --active        list only active zellij sessions
+-d, --dead          list only dead zellij sessions
 -p, --projects      list projects from the projects file
 -w, --worktrees     list git worktrees
 -s, --submodules    list git submodules
@@ -232,6 +235,10 @@ list_command() {
     got_submodules=1
     while [ "$#" -ge "1" ]; do
         case "$1" in
+            "-z" | "--zellij")
+                got_active=0
+                got_dead=0
+                ;;
             "-a" | "--active")
                 got_active=0
                 ;;
