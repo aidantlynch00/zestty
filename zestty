@@ -42,7 +42,7 @@ exit_fail_with_usage() {
 }
 
 print_zestty_usage() {
-    echo "$(cat <<EOF
+    cat <<EOF
 usage: zestty <command>
 
 $(bold "Available commands")
@@ -51,11 +51,10 @@ create      create a zellij session with a name, layout, and working directory
 attach      attach to an existing zellij session
 list        list things that can be sessionized
 EOF
-    )"
 }
 
 print_create_usage() {
-    echo "$(cat <<EOF
+    cat <<EOF
 usage: zestty create <name> [path] [layout]
 
 $(bold "Parameters")
@@ -63,21 +62,19 @@ name        name of the session
 path        working directory for the session, defaults to current directory
 layout      name of the layout to use, default layout if not provided
 EOF
-    )"
 }
 
 print_attach_usage() {
-    echo "$(cat <<EOF
+    cat <<EOF
 usage: zestty attach <name>
 
 $(bold "Parameters")
 name    name of the session
 EOF
-    )"
 }
 
 print_list_usage() {
-    echo "$(cat <<EOF
+    cat <<EOF
 usage: zestty list [-a] [-d] [-p] [-w] [-s]
 
 $(bold "Options")
@@ -88,7 +85,6 @@ $(bold "Options")
 -w, --worktrees     list git worktrees
 -s, --submodules    list git submodules
 EOF
-    )"
 }
 
 get_session_state() {
@@ -162,10 +158,12 @@ create_command() {
         # pushd and popd are bash builtins and are not POSIX compliant
         cd "$create_path"
 
-        if [ -n "$layout" ]; then
-            zellij --session "$name" --new-session-with-layout "$layout"
+        if [ -n "$create_layout" ]; then
+            zellij \
+                --session "$create_name" \
+                --new-session-with-layout "$create_layout"
         else
-            zellij --session "$name"
+            zellij --session "$create_name"
         fi
 
         cd "$create_cwd"
@@ -196,19 +194,19 @@ attach_command() {
 
 list_active_sessions() {
     zellij list-sessions --no-formatting 2> /dev/null | \
-    grep --invert-match "EXITED" | \
-    cut --delimiter " " --fields "1"
+    grep -v "EXITED" | \
+    cut -d " " -f "1"
 }
 
 list_dead_sessions() {
     zellij list-sessions --no-formatting 2> /dev/null | \
     grep "EXITED" | \
-    cut --delimiter " " --fields "1"
+    cut -d " " -f "1"
 }
 
 list_all_sessions() {
     zellij list-sessions --no-formatting 2> /dev/null | \
-    cut --delimiter " " --fields "1"
+    cut -d " " -f "1"
 }
 
 list_projects() {
@@ -228,7 +226,7 @@ list_worktrees() {
         getline; hash = $2;
         getline;
         if ($1 == "branch") {
-            sub(/refs\/(heads|tags)\//, "", $2);
+            sub(/refs\/\(heads\|tags\)\//, "", $2);
             printf "%s\n", $2;
         } else if ($1 == "detached") {
             printf "%.6s\n", hash;
@@ -318,13 +316,13 @@ case "$command" in
         print_zestty_usage
         ;;
     "create")
-        create_command $@
+        create_command "$@"
         ;;
     "attach")
-        attach_command $@
+        attach_command "$@"
         ;;
     "list")
-        list_command $@
+        list_command "$@"
         ;;
     *)
         exit_fail_with_usage \
