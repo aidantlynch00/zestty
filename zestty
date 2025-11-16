@@ -216,11 +216,33 @@ list_projects() {
 }
 
 list_worktrees() {
-    :
+    # TODO: use -C to check a specific directory
+    git_root=$(git rev-parse --show-toplevel 2> /dev/null)
+    if [ -z "$git_root" ]; then
+        exit_fail "Not in a git repository, cannot list worktrees!"
+    fi
+
+    git worktree list --porcelain |
+    awk -F" " '/^worktree/ {
+        printf "%s,", $2;
+        getline; hash = $2;
+        getline;
+        if ($1 == "branch") {
+            sub(/refs\/(heads|tags)\//, "", $2);
+            printf "%s\n", $2;
+        } else if ($1 == "detached") {
+            printf "%.6s\n", hash;
+        }
+    }'
 }
 
 list_submodules() {
-    :
+    git_root=$(git rev-parse --show-toplevel 2> /dev/null)
+    if [ -z "$git_root" ]; then
+        exit_fail "Not in a git repository, cannot list submodules!"
+    fi
+
+    git submodule | awk '{ print $2 }'
 }
 
 list_command() {
