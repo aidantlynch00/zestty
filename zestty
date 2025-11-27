@@ -213,8 +213,32 @@ list_all_sessions() {
     list_dead_sessions
 }
 
+PROJECT_FILE_LOCATION_ORDER="
+$HOME/.config/zestty/projects
+/etc/zestty/projects
+"
+
+find_project_file() {
+    for project_file in $PROJECT_FILE_LOCATION_ORDER; do
+        if [ -f "$project_file" ] && [ -r "$project_file" ]; then
+            echo "$project_file"
+            return
+        fi
+    done
+}
+
 list_projects() {
-    :
+    project_file=$(find_project_file)
+    if [ -z "$project_file" ]; then
+        exit_fail "No project file found!"
+    fi
+
+    project_list=$(sed "s/^/project:/" "$project_file")
+    if [ -z "$project_list" ]; then
+        warn "Project file has no projects!"
+    else
+        echo "$project_list"
+    fi
 }
 
 list_worktrees() {
