@@ -198,19 +198,20 @@ list_active_sessions() {
     zellij list-sessions --no-formatting 2> /dev/null | \
     grep -v "EXITED" | \
     cut -d " " -f "1" | \
-    sed "s/^/active:/"
+    sed "s/^/session:/"
 }
 
 list_dead_sessions() {
     zellij list-sessions --no-formatting 2> /dev/null | \
     grep "EXITED" | \
     cut -d " " -f "1" | \
-    sed "s/^/dead:/"
+    sed "s/^/session:/"
 }
 
 list_all_sessions() {
-    list_active_sessions
-    list_dead_sessions
+    zellij list-sessions --no-formatting 2> /dev/null | \
+    cut -d " " -f "1" | \
+    sed "s/^/session:/"
 }
 
 PROJECT_FILE_LOCATION_ORDER="
