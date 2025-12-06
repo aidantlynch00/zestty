@@ -91,19 +91,18 @@ EOF
 
 get_session_state() {
     session_name="$1"
-    session_state="dne"
     session=$(
         zellij list-sessions --no-formatting 2> /dev/null | \
-        grep "$session_name \["
+        awk "/^$session_name \[/ { print; exit }"
     )
 
-    if echo "$session" | grep --quiet "EXITED"; then
-        session_state="dead"
-    elif [ -n "$session" ]; then
-        session_state="active"
+    if [ -z "$session" ]; then
+        echo "dne"
+    elif echo "$session" | grep --quiet "EXITED"; then
+        echo "dead"
+    else
+        echo "active"
     fi
-
-    echo "$session_state"
 }
 
 call_zellij_switch_plugin() {
