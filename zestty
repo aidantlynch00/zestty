@@ -89,6 +89,14 @@ $(bold "Options")
 EOF
 }
 
+print_sessionize_usage() {
+    cat <<EOF
+usage: zestty sessionize
+
+$(bold "Options")
+EOF
+}
+
 get_session_state() {
     session_name="$1"
     session=$(
@@ -124,6 +132,57 @@ call_zellij_switch_plugin() {
     fi
 
     zellij pipe --plugin zellij-switch -- "$call_plugin_options"
+}
+
+PROJECT_FILE_LOCATION_ORDER="
+$HOME/.config/zestty/projects
+/etc/zestty/projects
+"
+
+find_project_file() {
+    for project_file in $PROJECT_FILE_LOCATION_ORDER; do
+        if [ -f "$project_file" ] && [ -r "$project_file" ]; then
+            echo "$project_file"
+            return
+        fi
+    done
+}
+
+match_project_name() {
+    expected_name=${1:-}
+
+    project_file=$(find_project_file)
+    [ -z "$project_file" ] && return 1
+
+    while read -r project; do
+        name=$(echo "$project" | cut --delimiter ":" --field "1")
+        if [ "$expected_name" = "$name" ]; then
+            echo "$project"
+            return
+        fi
+    done < "$project_file"
+}
+
+match_project_path() {
+    expected_relpath=${1:-}
+    [ -z "$expected_relpath" ] && return 1
+
+    expected_relpath=$(echo "$expected_relpath" | sed "s|^~|$HOME|")
+    expected_abspath=$(realpath "$expected_relpath")
+
+    project_file=$(find_project_file)
+    [ -z "$project_file" ] && return 1
+
+    while read -r project; do
+        relpath=$(echo "$project" | cut --delimiter ":" --field "2")
+        relpath=$(echo "$relpath" | sed "s|^~|$HOME|")
+        abspath=$(realpath "$relpath")
+
+        if [ "$expected_abspath" = "$abspath" ]; then
+            echo "$project"
+            return
+        fi
+    done < "$project_file"
 }
 
 create_command() {
@@ -211,20 +270,6 @@ list_all_sessions() {
     zellij list-sessions --no-formatting 2> /dev/null | \
     cut -d " " -f "1" | \
     sed "s/^/session:/"
-}
-
-PROJECT_FILE_LOCATION_ORDER="
-$HOME/.config/zestty/projects
-/etc/zestty/projects
-"
-
-find_project_file() {
-    for project_file in $PROJECT_FILE_LOCATION_ORDER; do
-        if [ -f "$project_file" ] && [ -r "$project_file" ]; then
-            echo "$project_file"
-            return
-        fi
-    done
 }
 
 list_projects() {
@@ -331,6 +376,146 @@ list_command() {
     return 0
 }
 
+sessionize_session() {
+    session_name=${1:-}
+    [ -z "$session_name" ] && exit_fail "Session name required!"
+
+    project=$(match_project_name "$session_name")
+    if [ -n "$project" ]; then
+        echo "project:$project" | sessionize_command
+        return
+    fi
+
+    session_state=$(get_session_state "$session_name")
+    case "$session_state" in
+        "dne")
+            exit_fail "Session '$session_name' no longer exists!"
+            ;;
+        "dead" | "active")
+            attach_command "$session_name"
+            ;;
+    esac
+}
+
+sessionize_project() {
+    project_name=${1:-}
+    project_path=${2:-}
+    project_layout=${3:-}
+
+    if [ -z "$project_name" ]; then
+        exit_fail "Project name required!"
+    elif [ -z "$project_path" ]; then
+        exit_fail "Project path required!"
+    fi
+
+    project_abspath=$(echo "$project_path" | sed "s|^~|$HOME|")
+    project_abspath=$(realpath "$project_abspath")
+    if ! [ -d "$project_abspath" ]; then
+        exit_fail "Project path must be a directory!"
+    fi
+
+    session_state=$(get_session_state "$project_name")
+    case "$session_state" in
+        "dne")
+            create_command "$project_name" "$project_abspath" "$project_layout"
+            ;;
+        "dead")
+            zellij delete-session "$project_name" > /dev/null
+            create_command "$project_name" "$project_abspath" "$project_layout"
+            ;;
+        "active")
+            attach_command "$project_name"
+            ;;
+    esac
+}
+
+sessionize_worktree() {
+    worktree_path=${2:-}
+
+    if [ -z "$worktree_path" ]; then
+        exit_fail "Worktree path required!"
+    elif ! [ -d "$worktree_path" ]; then
+        exit_fail "Project path must be a directory!"
+    fi
+
+    worktree_project=$(match_project_path "$worktree_path")
+    if [ -n "$worktree_project" ]; then
+        echo "project:$worktree_project" | sessionize_command
+        return
+    fi
+
+    worktree_name=$(basename "$worktree_path")
+    worktree_session_state=$(get_session_state "$worktree_name")
+    case "$worktree_session_state" in
+        "dne")
+            create_command "$worktree_name" "$worktree_path"
+            ;;
+        "dead" | "active")
+            attach_command "$worktree_name"
+            ;;
+    esac
+}
+
+sessionize_submodule() {
+    submodule_name=${1:-}
+    submodule_path=${2:-}
+
+    if [ -z "$submodule_name" ]; then
+        exit_fail "Submodule name required!"
+    elif [ -z "$submodule_path" ]; then
+        exit_fail "Submodule path required!"
+    fi
+
+    submodule_project=$(match_project_name "$submodule_name")
+    if [ -n "$submodule_project" ]; then
+        echo "project:$submodule_project" | sessionize_command
+        return
+    fi
+
+    submodule_project=$(match_project_path "$submodule_path")
+    if [ -n "$submodule_project" ]; then
+        echo "project:$submodule_project" | sessionize_command
+        return
+    fi
+
+    submodule_session_state=$(get_session_state "$submodule_name")
+    case "$submodule_session_state" in
+        "dne")
+            create_command "$submodule_name" "$submodule_path"
+            ;;
+        "dead" | "active")
+            attach_command "$submodule_name"
+            ;;
+    esac
+}
+
+sessionize_command() {
+    IFS=":" read -r type rest
+
+    # split rest into arguments for sessionize functions
+    sessionize_old_delimiter=$IFS
+    IFS=":"
+    set -- $rest
+    IFS="$sessionize_old_delimiter"
+
+    case "$type" in
+        "session")
+            sessionize_session "$@"
+            ;;
+        "project")
+            sessionize_project "$@"
+            ;;
+        "worktree")
+            sessionize_worktree "$@"
+            ;;
+        "submodule")
+            sessionize_submodule "$@"
+            ;;
+        *)
+            ;;
+    esac
+}
+
 # do not proceed if config is invalid
 if ! zellij setup --check 1> /dev/null; then
     exit_fail
@@ -355,6 +540,9 @@ case "$command" in
         ;;
     "list")
         list_command "$@"
+        ;;
+    "sessionize")
+        sessionize_command "$@"
         ;;
     *)
         exit_fail_with_usage \
