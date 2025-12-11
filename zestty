@@ -77,7 +77,7 @@ EOF
 
 print_list_usage() {
     cat <<EOF
-usage: zestty list [-a] [-d] [-p] [-w] [-s]
+usage: zestty list [-z] [-a] [-d] [-p] [-w] [-s]
 
 $(bold "Options")
 -z, --zellij        list all zellij sessions
@@ -91,9 +91,13 @@ EOF
 
 print_sessionize_usage() {
     cat <<EOF
-usage: zestty sessionize
+usage: zestty sessionize <session>
 
-$(bold "Options")
+$(bold "Builtin session types")
+session     session:<name>
+project     project:<name>:<path>:[layout]
+worktree    worktree:<ref>:<path>
+submodule   submodule:<name>:<path>
 EOF
 }
 
@@ -152,12 +156,12 @@ match_project_name() {
     expected_name=${1:-}
 
     project_file=$(find_project_file)
-    [ -z "$project_file" ] && return 1
+    [ -z "$project_file" ] && return
 
     while read -r project; do
         name=$(echo "$project" | cut --delimiter ":" --field "1")
         if [ "$expected_name" = "$name" ]; then
-            echo "$project"
+            echo "project:$project"
             return
         fi
     done < "$project_file"
@@ -165,13 +169,13 @@ match_project_name() {
 
 match_project_path() {
     expected_relpath=${1:-}
-    [ -z "$expected_relpath" ] && return 1
+    [ -z "$expected_relpath" ] && return
 
     expected_relpath=$(echo "$expected_relpath" | sed "s|^~|$HOME|")
     expected_abspath=$(realpath "$expected_relpath")
 
     project_file=$(find_project_file)
-    [ -z "$project_file" ] && return 1
+    [ -z "$project_file" ] && return
 
     while read -r project; do
         relpath=$(echo "$project" | cut --delimiter ":" --field "2")
@@ -179,7 +183,7 @@ match_project_path() {
         abspath=$(realpath "$relpath")
 
         if [ "$expected_abspath" = "$abspath" ]; then
-            echo "$project"
+            echo "project:$project"
             return
         fi
     done < "$project_file"
@@ -380,9 +384,9 @@ sessionize_session() {
     session_name=${1:-}
     [ -z "$session_name" ] && exit_fail "Session name required!"
 
-    project=$(match_project_name "$session_name")
-    if [ -n "$project" ]; then
-        echo "project:$project" | sessionize_command
+    session_project=$(match_project_name "$session_name")
+    if [ -n "$session_project" ]; then
+        sessionize_command "$session_project"
         return
     fi
 
@@ -440,7 +444,7 @@ sessionize_worktree() {
 
     worktree_project=$(match_project_path "$worktree_path")
     if [ -n "$worktree_project" ]; then
-        echo "project:$worktree_project" | sessionize_command
+        sessionize_command "$worktree_project"
         return
     fi
 
@@ -459,6 +463,7 @@ sessionize_worktree() {
 sessionize_submodule() {
     submodule_name=${1:-}
     submodule_path=${2:-}
+    submodule_layout=""
 
     if [ -z "$submodule_name" ]; then
         exit_fail "Submodule name required!"
@@ -468,20 +473,29 @@ sessionize_submodule() {
 
     submodule_project=$(match_project_name "$submodule_name")
     if [ -n "$submodule_project" ]; then
-        echo "project:$submodule_project" | sessionize_command
-        return
-    fi
+        # split project for path and layout
+        sessionize_old_delimiter=$IFS
+        IFS=":"
+        set -- $submodule_project
+        IFS="$sessionize_old_delimiter"
 
-    submodule_project=$(match_project_path "$submodule_path")
-    if [ -n "$submodule_project" ]; then
-        echo "project:$submodule_project" | sessionize_command
-        return
+        # get rid of type
+        shift
+
+        submodule_name="$1_$submodule_name"
+        submodule_layout="$3"
+    else
+        submodule_project=$(match_project_path "$submodule_path")
+        if [ -n "$submodule_project" ]; then
+            sessionize_command "$submodule_project"
+            return
+        fi
     fi
 
     submodule_session_state=$(get_session_state "$submodule_name")
     case "$submodule_session_state" in
         "dne")
-            create_command "$submodule_name" "$submodule_path"
+            create_command "$submodule_name" "$submodule_path" "$submodule_layout"
             ;;
         "dead" | "active")
             attach_command "$submodule_name"
@@ -490,15 +504,24 @@ sessionize_submodule() {
 }
 
 sessionize_command() {
-    IFS=":" read -r type rest
+    sessionize_session=${1:-}
+    if [ -z "$sessionize_session" ]; then
+        exit_fail_with_usage \
+            "A session is required!" \
+            print_sessionize_usage
+    fi
 
-    # split rest into arguments for sessionize functions
+    # split into arguments for sessionize functions
     sessionize_old_delimiter=$IFS
     IFS=":"
-    set -- $rest
+    set -- $sessionize_session
     IFS="$sessionize_old_delimiter"
 
-    case "$type" in
+    # pop the type off the arguments
+    sessionize_type=${1:-}
+    shift
+
+    case "$sessionize_type" in
         "session")
             sessionize_session "$@"
             ;;
@@ -512,6 +535,9 @@ sessionize_command() {
             sessionize_submodule "$@"
             ;;
         *)
+            exit_fail_with_usage \
+                "A session type is required!" \
+                print_sessionize_usage
             ;;
     esac
 }
