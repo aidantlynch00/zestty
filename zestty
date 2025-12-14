@@ -152,7 +152,7 @@ call_zellij_switch_plugin() {
         call_plugin_options="$call_plugin_options --layout $call_plugin_layout"
     fi
 
-    zellij pipe --plugin zellij-switch -- "$call_plugin_options"
+    exec zellij pipe --plugin zellij-switch -- "$call_plugin_options"
 }
 
 match_project_name() {
@@ -231,11 +231,11 @@ create_command() {
         cd "$create_path"
 
         if [ -n "$create_layout" ]; then
-            zellij \
+            exec zellij \
                 --session "$create_name" \
                 --new-session-with-layout "$create_layout"
         else
-            zellij --session "$create_name"
+            exec zellij --session "$create_name"
         fi
 
         cd "$create_cwd"
@@ -260,7 +260,7 @@ attach_command() {
     if [ "$ZELLIJ" = "0" ]; then
         call_zellij_switch_plugin "$attach_name"
     else
-        zellij attach "$attach_name"
+        exec zellij attach "$attach_name"
     fi
 }
 
@@ -517,8 +517,8 @@ sessionize_submodule() {
 }
 
 sessionize_command() {
-    sessionize_session=${1:-}
-    if [ -z "$sessionize_session" ]; then
+    session=${1:-}
+    if [ -z "$session" ]; then
         exit_fail_with_usage \
             "A session is required!" \
             print_sessionize_usage
@@ -527,7 +527,7 @@ sessionize_command() {
     # split into arguments for sessionize functions
     sessionize_old_delimiter=$IFS
     IFS="$ZESTTY_DELIM"
-    set -- $sessionize_session
+    set -- $session
     IFS="$sessionize_old_delimiter"
 
     # pop the type off the arguments
