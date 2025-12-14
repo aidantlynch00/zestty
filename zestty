@@ -5,10 +5,6 @@ set -eu
 
 CWD=$(pwd)
 
-# if we are not in a zellij session, explicitly set the ZELLIJ environment
-# variable to 1 so that we can use it in conditionals later
-ZELLIJ=${ZELLIJ:-1}
-
 bold()    { printf "\033[1m%s\033[0m" "$*"; }
 success() { printf "\033[32m%s\033[0m\n" "$*"; }
 info()    { printf "\033[36m%s\033[0m\n" "$*"; }
@@ -101,6 +97,27 @@ submodule   submodule:<name>:<path>
 EOF
 }
 
+find_file_in_order() {
+    for file in $@; do
+        if [ -f "$file" ] && [ -r "$file" ]; then
+            echo "$file"
+            return
+        fi
+    done
+}
+
+find_config_file() {
+    find_file_in_order \
+        "$HOME/.config/zestty/config" \
+        "/etc/zestty/config"
+}
+
+find_project_file() {
+    find_file_in_order \
+        "$HOME/.config/zestty/projects" \
+        "/etc/zestty/projects"
+}
+
 get_session_state() {
     session_name="$1"
     session=$(
@@ -138,20 +155,6 @@ call_zellij_switch_plugin() {
     zellij pipe --plugin zellij-switch -- "$call_plugin_options"
 }
 
-PROJECT_FILE_LOCATION_ORDER="
-$HOME/.config/zestty/projects
-/etc/zestty/projects
-"
-
-find_project_file() {
-    for project_file in $PROJECT_FILE_LOCATION_ORDER; do
-        if [ -f "$project_file" ] && [ -r "$project_file" ]; then
-            echo "$project_file"
-            return
-        fi
-    done
-}
-
 match_project_name() {
     expected_name=${1:-}
 
@@ -159,9 +162,12 @@ match_project_name() {
     [ -z "$project_file" ] && return
 
     while read -r project; do
-        name=$(echo "$project" | cut --delimiter ":" --field "1")
+        name=$(echo "$project" | cut -d "$ZESTTY_PROJECT_DELIM" -f "1")
+
         if [ "$expected_name" = "$name" ]; then
-            echo "project:$project"
+            echo "$project" |
+            sed -e "s/$ZESTTY_PROJECT_DELIM/$ZESTTY_DELIM/g" \
+                -e "s/^/project$ZESTTY_DELIM/"
             return
         fi
     done < "$project_file"
@@ -178,12 +184,14 @@ match_project_path() {
     [ -z "$project_file" ] && return
 
     while read -r project; do
-        relpath=$(echo "$project" | cut --delimiter ":" --field "2")
+        relpath=$(echo "$project" | cut -d "$ZESTTY_PROJECT_DELIM" -f "2")
         relpath=$(echo "$relpath" | sed "s|^~|$HOME|")
         abspath=$(realpath "$relpath")
 
         if [ "$expected_abspath" = "$abspath" ]; then
-            echo "project:$project"
+            echo "$project" |
+            sed -e "s/$ZESTTY_PROJECT_DELIM/$ZESTTY_DELIM/g" \
+                -e "s/^/project$ZESTTY_DELIM/"
             return
         fi
     done < "$project_file"
@@ -260,20 +268,20 @@ list_active_sessions() {
     zellij list-sessions --no-formatting 2> /dev/null | \
     grep -v "EXITED" | \
     cut -d " " -f "1" | \
-    sed "s/^/session:/"
+    sed "s/^/session$ZESTTY_DELIM/"
 }
 
 list_dead_sessions() {
     zellij list-sessions --no-formatting 2> /dev/null | \
     grep "EXITED" | \
     cut -d " " -f "1" | \
-    sed "s/^/session:/"
+    sed "s/^/session$ZESTTY_DELIM/"
 }
 
 list_all_sessions() {
     zellij list-sessions --no-formatting 2> /dev/null | \
     cut -d " " -f "1" | \
-    sed "s/^/session:/"
+    sed "s/^/session$ZESTTY_DELIM/"
 }
 
 list_projects() {
@@ -282,7 +290,12 @@ list_projects() {
         exit_fail "No project file found!"
     fi
 
-    project_list=$(sed "s/^/project:/" "$project_file")
+    project_list=$(sed \
+        -e "s/$ZESTTY_PROJECT_DELIM/$ZESTTY_DELIM/g" \
+        -e "s/^/project$ZESTTY_DELIM/" \
+        "$project_file"
+    )
+
     if [ -z "$project_list" ]; then
         warn "Project file has no projects!"
     else
@@ -309,7 +322,7 @@ list_worktrees() {
             printf "%.6s:%s\n", hash, path;
         }
     }' | \
-    sed "s/^/worktree:/"
+    sed -e "s/:/$ZESTTY_DELIM/g" -e "s/^/worktree$ZESTTY_DELIM/"
 }
 
 list_submodules() {
@@ -321,7 +334,7 @@ list_submodules() {
     git submodule | \
     sed -n "s/^ [a-f0-9]* \+\(.*\) \+(.*)$/\1/p" | \
     xargs -I{} realpath "$CWD/{}" | \
-    sed -n "s/^\(.*\/\)\([^\/]*\)$/submodule:\2:\1\2/p"
+    sed -n "s/^\(.*\/\)\([^\/]*\)$/submodule$ZESTTY_DELIM\2$ZESTTY_DELIM\1\2/p"
 }
 
 list_command() {
@@ -475,7 +488,7 @@ sessionize_submodule() {
     if [ -n "$submodule_project" ]; then
         # split project for path and layout
         sessionize_old_delimiter=$IFS
-        IFS=":"
+        IFS="$ZESTTY_DELIM"
         set -- $submodule_project
         IFS="$sessionize_old_delimiter"
 
@@ -513,7 +526,7 @@ sessionize_command() {
 
     # split into arguments for sessionize functions
     sessionize_old_delimiter=$IFS
-    IFS=":"
+    IFS="$ZESTTY_DELIM"
     set -- $sessionize_session
     IFS="$sessionize_old_delimiter"
 
@@ -553,6 +566,32 @@ fi
 
 command="$1"
 shift
+
+# if we are not in a zellij session, explicitly set the ZELLIJ environment
+# variable to 1 so that we can use it in conditionals later
+ZELLIJ=${ZELLIJ:-1}
+
+# save config from environment
+ZESTTY_DELIM_ENV=${ZESTTY_DELIM:-}
+ZESTTY_PROJECT_DELIM_ENV=${ZESTTY_PROJECT_DELIM:-}
+
+config_file=$(find_config_file)
+if [ -n "$config_file" ]; then
+    source "$config_file"
+fi
+
+# set to default if not in configured
+ZESTTY_DELIM=${ZESTTY_DELIM:-":"}
+ZESTTY_PROJECT_DELIM=${ZESTTY_PROJECT_DELIM:-":"}
+
+# prefer values from environment
+if [ -n "$ZESTTY_DELIM_ENV" ]; then
+    ZESTTY_DELIM=$ZESTTY_DELIM_ENV
+fi
+
+if [ -n "$ZESTTY_PROJECT_DELIM_ENV" ]; then
+    ZESTTY_PROJECT_DELIM=$ZESTTY_PROJECT_DELIM_ENV
+fi
 
 case "$command" in
     "-?" | "-h" | "--help" | "help")
