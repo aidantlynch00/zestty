@@ -48,6 +48,9 @@ help        print this message
 create      create a zellij session with a name, layout, and working directory
 attach      attach to an existing zellij session
 list        list things that can be sessionized
+sessionize  create or attach to a session object
+
+Run each command with no arguments to print its help text.
 EOF
 }
 
