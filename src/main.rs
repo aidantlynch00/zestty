@@ -62,15 +62,12 @@ impl Zestty {
         let SwitchArgs { name, path, layout } = args;
         let name = name.as_deref();
         let cwd = path.map(PathBuf::from);
+        let layout = match layout {
+            Some(layout) => LayoutInfo::File(layout),
+            None => LayoutInfo::File(String::from("default"))
+        };
 
-        if let Some(layout) = layout {
-            let layout = LayoutInfo::File(layout);
-            switch_session_with_layout(name, layout, cwd);
-        }
-        else {
-            switch_session_with_cwd(name, cwd);
-        }
-
+        switch_session_with_layout(name, layout, cwd);
         close_self();
     }
 }
