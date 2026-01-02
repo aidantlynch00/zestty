@@ -70,5 +70,7 @@ impl Zestty {
         else {
             switch_session_with_cwd(name, cwd);
         }
+
+        close_self();
     }
 }
