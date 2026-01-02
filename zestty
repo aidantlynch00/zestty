@@ -134,7 +134,7 @@ get_session_state() {
     fi
 }
 
-call_zellij_switch_plugin() {
+call_plugin_switch() {
     if [ "$#" -lt "1" ]; then
         exit_fail "Session name required!"
     fi
@@ -143,16 +143,17 @@ call_zellij_switch_plugin() {
     call_plugin_path=${2:-}
     call_plugin_layout=${3:-}
 
-    call_plugin_options="--session $call_plugin_name"
+    call_plugin_options="{ \"command\": \"switch\", \"name\": \"$call_plugin_name\""
     if [ -n "$call_plugin_path" ] && [ -d "$call_plugin_path" ]; then
-        call_plugin_options="$call_plugin_options --cwd $call_plugin_path"
+        call_plugin_options="$call_plugin_options, \"path\": \"$call_plugin_path\""
     fi
 
     if [ -n "$call_plugin_layout" ]; then
-        call_plugin_options="$call_plugin_options --layout $call_plugin_layout"
+        call_plugin_options="$call_plugin_options, \"layout\": \"$call_plugin_layout\""
     fi
 
-    exec zellij pipe --plugin zellij-switch -- "$call_plugin_options"
+    call_plugin_options="$call_plugin_options }"
+    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "$call_plugin_options"
 }
 
 match_project_name() {
@@ -222,7 +223,7 @@ create_command() {
     fi
 
     if [ "$ZELLIJ" = "0" ]; then
-        call_zellij_switch_plugin \
+        call_plugin_switch \
             "$create_name" \
             "$create_path" \
             "$create_layout"
@@ -258,7 +259,7 @@ attach_command() {
     fi
 
     if [ "$ZELLIJ" = "0" ]; then
-        call_zellij_switch_plugin "$attach_name"
+        call_plugin_switch "$attach_name"
     else
         exec zellij attach "$attach_name"
     fi
@@ -574,15 +575,17 @@ ZELLIJ=${ZELLIJ:-1}
 # save config from environment
 ZESTTY_DELIM_ENV=${ZESTTY_DELIM:-}
 ZESTTY_PROJECT_DELIM_ENV=${ZESTTY_PROJECT_DELIM:-}
+ZESTTY_PLUGIN_URL_ENV=${ZESTTY_PLUGIN_URL:-}
 
 config_file=$(find_config_file)
 if [ -n "$config_file" ]; then
     source "$config_file"
 fi
 
-# set to default if not in configured
+# set to default if not configured
 ZESTTY_DELIM=${ZESTTY_DELIM:-":"}
 ZESTTY_PROJECT_DELIM=${ZESTTY_PROJECT_DELIM:-":"}
+ZESTTY_PLUGIN_URL=${ZESTTY_PLUGIN_URL:-"https://github.com/aidantlynch00/zestty/releases/latest/download/zestty.wasm"}
 
 # prefer values from environment
 if [ -n "$ZESTTY_DELIM_ENV" ]; then
@@ -591,6 +594,10 @@ fi
 
 if [ -n "$ZESTTY_PROJECT_DELIM_ENV" ]; then
     ZESTTY_PROJECT_DELIM=$ZESTTY_PROJECT_DELIM_ENV
+fi
+
+if [ -n "$ZESTTY_PLUGIN_URL_ENV" ]; then
+    ZESTTY_PLUGIN_URL=$ZESTTY_PLUGIN_URL_ENV
 fi
 
 case "$command" in
