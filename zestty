@@ -77,15 +77,15 @@ EOF
 
 print_pick_usage() {
     cat <<EOF
-usage: zestty pick < -z | -a | -d | -p | -w | -s > [query]
+usage: zestty pick <z | a | d | p | w | s> [query]
 
-$(bold "Options")
--z, --zellij        pick zellij sessions
--a, --active        pick only active zellij sessions
--d, --dead          pick only dead zellij sessions
--p, --projects      pick projects from the projects file
--w, --worktrees     pick git worktrees
--s, --submodules    pick git submodules
+$(bold "Pickers")
+z, zellij        pick zellij sessions
+a, active        pick only active zellij sessions
+d, dead          pick only dead zellij sessions
+p, projects      pick projects from the projects file
+w, worktrees     pick git worktrees
+s, submodules    pick git submodules
 
 $(bold "Parameters")
 query   initial query for fuzzy finder
@@ -94,15 +94,15 @@ EOF
 
 print_list_usage() {
     cat <<EOF
-usage: zestty list [-z] [-a] [-d] [-p] [-w] [-s]
+usage: zestty list [z] [a] [d] [p] [w] [s]
 
-$(bold "Options")
--z, --zellij        list all zellij sessions
--a, --active        list only active zellij sessions
--d, --dead          list only dead zellij sessions
--p, --projects      list projects from the projects file
--w, --worktrees     list git worktrees
--s, --submodules    list git submodules
+$(bold "Lists")
+z, zellij        list all zellij sessions
+a, active        list only active zellij sessions
+d, dead          list only dead zellij sessions
+p, projects      list projects from the projects file
+w, worktrees     list git worktrees
+s, submodules    list git submodules
 EOF
 }
 
@@ -110,14 +110,14 @@ print_sessionize_usage() {
     cat <<EOF
 usage: zestty sessionize <session>
 
-$(bold "Parameters")
-session     session object to sessionize
-
 $(bold "Builtin session types")
 session     session:<name>:<state>
 project     project:<name>:<path>:[layout]
 worktree    worktree:<ref>:<path>
 submodule   submodule:<name>:<path>
+
+$(bold "Parameters")
+session     session object to sessionize
 EOF
 }
 
@@ -333,40 +333,40 @@ pick_command() {
 
     ZESTTY_DELIM=$'\t'
     case "$pick_list" in
-        "-z" | "--zellij")
+        "z" | "zellij")
             pick_selected=$(
                 { list_active_sessions; list_dead_sessions; } |
                 zestty_transform_picker "$pick_query" "{2}$ZESTTY_DELIM[{3}]" \
                     --header="zellij"
             )
             ;;
-        "-a" | "--active")
+        "a" | "active")
             pick_selected=$(
                 list_active_sessions |
                 zestty_name_picker "$pick_query" --header="active"
             )
             ;;
-        "-d" | "--dead")
+        "d" | "dead")
             pick_selected=$(
                 list_dead_sessions |
                 zestty_name_picker "$pick_query" --header="dead"
             )
             ;;
-        "-p" | "--projects")
+        "p" | "projects")
             pick_selected=$(
                 list_projects |
                 zestty_transform_picker "$pick_query" "{2}$ZESTTY_DELIM({3})" \
                     --header="projects"
             )
             ;;
-        "-w" | "--worktrees")
+        "w" | "worktrees")
             pick_selected=$(
                 list_worktrees |
                 zestty_transform_picker "$pick_query" "{3}$ZESTTY_DELIM({2})" \
                     --header="worktrees"
             )
             ;;
-        "-s" | "--submodules")
+        "s" | "submodules")
             pick_selected=$(
                 list_submodules |
                 zestty_transform_picker "$pick_query" "{2}$ZESTTY_DELIM({3})" \
@@ -468,12 +468,12 @@ list_command() {
     got_submodules=1
     while [ "$#" -ge "1" ]; do
         case "$1" in
-            "-z" | "--zellij") got_active=0; got_dead=0;;
-            "-a" | "--active") got_active=0;;
-            "-d" | "--dead") got_dead=0;;
-            "-p" | "--projects") got_projects=0;;
-            "-w" | "--worktrees") got_worktrees=0;;
-            "-s" | "--submodules") got_submodules=0;;
+            "z" | "zellij") got_active=0; got_dead=0;;
+            "a" | "active") got_active=0;;
+            "d" | "dead") got_dead=0;;
+            "p" | "projects") got_projects=0;;
+            "w" | "worktrees") got_worktrees=0;;
+            "s" | "submodules") got_submodules=0;;
             *)
                 exit_fail_with_usage \
                     "Unknown option '$1'" \
@@ -672,12 +672,12 @@ if [ -n "$ZESTTY_PLUGIN_URL_ENV" ]; then
 fi
 
 case "$command" in
-    "-?" | "-h" | "--help" | "help") print_zestty_usage;;
-    "create") create_command "$@";;
-    "attach") attach_command "$@";;
-    "pick") pick_command "$@";;
-    "list") list_command "$@";;
-    "sessionize") sessionize_command "$@";;
+    "-?" | "-h" | "--help" | "h" | "help") print_zestty_usage;;
+    "c" | "create") create_command "$@";;
+    "a" | "attach") attach_command "$@";;
+    "p" | "pick") pick_command "$@";;
+    "l" | "list") list_command "$@";;
+    "s" | "sessionize") sessionize_command "$@";;
     *) exit_fail_with_usage "Unknown command '$command'" print_zestty_usage;;
 esac
 
