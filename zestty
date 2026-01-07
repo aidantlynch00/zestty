@@ -12,34 +12,29 @@ warn()    { printf "\033[33m%s\033[0m\n" "$*" 1>&2; }
 error()   { printf "\033[31m%s\033[0m\n" "$*" 1>&2; }
 
 exit_success() {
-    success_message=${1:-}
-    [ -n "$success_message" ] && success "$1"
+    [ -n "${1-}" ] && success "$1"
     exit 0
 }
 
 exit_fail() {
-    fail_message=${1:-}
-    [ -n "$fail_message" ] && error "$1"
+    [ -n "${1-}" ] && error "$1"
     exit 1
 }
 
 exit_fail_with_usage() {
-    with_usage_message=${1:-}
-    with_usage_function=${2:-}
+    _efwu_message=${1:-}
+    _efwu_function=${2:-}
 
-    if [ -n "$with_usage_message" ]; then
-        error "$with_usage_message"
-        [ -n "$with_usage_function" ] && echo
+    if [ -n "$_efwu_message" ]; then
+        error "$_efwu_message"
+        [ -n "$_efwu_function" ] && echo
     fi
 
-    if [ -n "$with_usage_function" ]; then
-        eval "$with_usage_function"
-    fi
-
+    [ -n "$_efwu_function" ] && eval "$_efwu_function"
     exit 1
 }
 
-print_zestty_usage() {
+zestty_usage() {
     cat <<EOF
 usage: zestty <command>
 
@@ -53,7 +48,7 @@ sessionize  create or attach to a session object
 EOF
 }
 
-print_create_usage() {
+zestty_create_usage() {
     cat <<EOF
 usage: zestty create <name> [path] [layout]
 
@@ -64,7 +59,7 @@ layout      name of the layout to use, default layout if not provided
 EOF
 }
 
-print_attach_usage() {
+zestty_attach_usage() {
     cat <<EOF
 usage: zestty attach <name>
 
@@ -73,7 +68,7 @@ name    name of the session
 EOF
 }
 
-print_pick_usage() {
+zestty_pick_usage() {
     cat <<EOF
 usage: zestty pick <z | a | d | p | w | s> [query]
 
@@ -90,7 +85,7 @@ query   initial query for fuzzy finder
 EOF
 }
 
-print_list_usage() {
+zestty_list_usage() {
     cat <<EOF
 usage: zestty list [z] [a] [d] [p] [w] [s]
 
@@ -104,7 +99,7 @@ s, submodules    list git submodules
 EOF
 }
 
-print_sessionize_usage() {
+zestty_sessionize_usage() {
     cat <<EOF
 usage: zestty sessionize <session>
 
@@ -119,291 +114,291 @@ session     session object to sessionize
 EOF
 }
 
-find_file_in_order() {
-    for file in $@; do
-        if [ -f "$file" ] && [ -r "$file" ]; then
-            echo "$file"
+zestty_find_file_in_order() {
+    for _ffio_file in "$@"; do
+        if [ -f "$_ffio_file" ] && [ -r "$_ffio_file" ]; then
+            echo "$_ffio_file"
             return
         fi
     done
 }
 
-find_config_file() {
-    find_file_in_order \
+zestty_find_config_file() {
+    zestty_find_file_in_order \
         "$HOME/.config/zestty/config" \
         "/etc/zestty/config"
 }
 
-find_project_file() {
-    find_file_in_order \
+zestty_find_project_file() {
+    zestty_find_file_in_order \
         "$HOME/.config/zestty/projects" \
         "/etc/zestty/projects"
 }
 
-get_session_state() {
-    session_name="$1"
-    session=$(
-        zellij list-sessions --no-formatting 2> /dev/null | \
-        awk "/^$session_name \[/ { print; exit }"
+zestty_get_session_state() {
+    _gss_name="$1"
+    _gss_session=$(
+        command zellij list-sessions --no-formatting 2> /dev/null | \
+        awk "/^$_gss_name \[/ { print; exit }"
     )
 
-    if [ -z "$session" ]; then
+    if [ -z "$_gss_session" ]; then
         echo "dne"
-    elif echo "$session" | grep --quiet "EXITED"; then
+    elif echo "$_gss_session" | grep --quiet "EXITED"; then
         echo "dead"
     else
         echo "active"
     fi
 }
 
-call_plugin_switch() {
+zestty_call_switch() {
     if [ "$#" -lt "1" ]; then
         exit_fail "Session name required!"
     fi
 
-    call_plugin_name="$1"
-    call_plugin_path=${2:-}
-    call_plugin_layout=${3:-}
+    _cs_name="$1"
+    _cs_path=${2:-}
+    _cs_layout=${3:-}
 
-    call_plugin_options="{ \"command\": \"switch\", \"name\": \"$call_plugin_name\""
-    if [ -n "$call_plugin_path" ] && [ -d "$call_plugin_path" ]; then
-        call_plugin_options="$call_plugin_options, \"path\": \"$call_plugin_path\""
+    _cs_options="{ \"command\": \"switch\", \"name\": \"$_cs_name\""
+    if [ -n "$_cs_path" ] && [ -d "$_cs_path" ]; then
+        _cs_options="$_cs_options, \"path\": \"$_cs_path\""
     fi
 
-    if [ -n "$call_plugin_layout" ]; then
-        call_plugin_options="$call_plugin_options, \"layout\": \"$call_plugin_layout\""
+    if [ -n "$_cs_layout" ]; then
+        _cs_options="$_cs_options, \"layout\": \"$_cs_layout\""
     fi
 
-    call_plugin_options="$call_plugin_options }"
-    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "$call_plugin_options"
+    _cs_options="$_cs_options }"
+    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "$_cs_options"
 }
 
-match_project_name() {
-    expected_name=${1:-}
+zestty_match_project_name() {
+    _mpn_expected_name=${1:-}
 
-    project_file=$(find_project_file)
-    [ -z "$project_file" ] && return
+    _mpn_project_file=$(zestty_find_project_file)
+    [ -z "$_mpn_project_file" ] && return
 
-    while read -r project; do
-        name=$(echo "$project" | cut -d "$ZESTTY_PROJECT_DELIM" -f "1")
+    while read -r _mpn_project; do
+        _mpn_actual_name=$(echo "$_mpn_project" | cut -d "$ZESTTY_PROJECT_DELIM" -f "1")
 
-        if [ "$expected_name" = "$name" ]; then
-            echo "$project" |
+        if [ "$_mpn_expected_name" = "$_mpn_actual_name" ]; then
+            echo "$_mpn_project" |
             sed -e "s/$ZESTTY_PROJECT_DELIM/$ZESTTY_DELIM/g" \
                 -e "s/^/project$ZESTTY_DELIM/"
             return
         fi
-    done < "$project_file"
+    done < "$_mpn_project_file"
 }
 
-match_project_path() {
-    expected_relpath=${1:-}
-    [ -z "$expected_relpath" ] && return
+zestty_match_project_path() {
+    _mpp_expected_relpath=${1:-}
+    [ -z "$_mpp_expected_relpath" ] && return
 
-    expected_relpath=$(echo "$expected_relpath" | sed "s|^~|$HOME|")
-    expected_abspath=$(realpath "$expected_relpath")
+    _mpp_expected_relpath=$(echo "$_mpp_expected_relpath" | sed "s|^~|$HOME|")
+    _mpp_expected_abspath=$(realpath "$_mpp_expected_relpath")
 
-    project_file=$(find_project_file)
-    [ -z "$project_file" ] && return
+    _mpp_project_file=$(zestty_find_project_file)
+    [ -z "$_mpp_project_file" ] && return
 
-    while read -r project; do
-        relpath=$(echo "$project" | cut -d "$ZESTTY_PROJECT_DELIM" -f "2")
-        relpath=$(echo "$relpath" | sed "s|^~|$HOME|")
-        abspath=$(realpath "$relpath")
+    while read -r _mpp_project; do
+        _mpp_actual_relpath=$(echo "$_mpp_project" | cut -d "$ZESTTY_PROJECT_DELIM" -f "2")
+        _mpp_actual_relpath=$(echo "$_mpp_actual_relpath" | sed "s|^~|$HOME|")
+        _mpp_actual_abspath=$(realpath "$relpath")
 
-        if [ "$expected_abspath" = "$abspath" ]; then
-            echo "$project" |
+        if [ "$_mpp_expected_abspath" = "$_mpp_actual_abspath" ]; then
+            echo "$_mpp_project" |
             sed -e "s/$ZESTTY_PROJECT_DELIM/$ZESTTY_DELIM/g" \
                 -e "s/^/project$ZESTTY_DELIM/"
             return
         fi
-    done < "$project_file"
+    done < "$_mpp_project_file"
 }
 
-create_command() {
+zestty_create() {
     if [ "$#" -lt "1" ]; then
         exit_fail_with_usage \
             "Session name required!" \
-            print_create_usage
+            zestty_create_usage
     fi
 
-    create_cwd=$CWD
-    create_name="$1"
-    create_path=${2:-"$create_cwd"}
-    create_layout=${3:-}
+    _c_cwd=$CWD
+    _c_name="$1"
+    _c_path=${2:-"$_c_cwd"}
+    _c_layout=${3:-}
 
-    case "$create_name" in
+    case "$_c_name" in
         "-?" | "-h" | "--help")
-            print_create_usage
+            zestty_create_usage
             exit_success
             ;;
     esac
 
-    if ! [ "$(get_session_state "$create_name")" = "dne" ]; then
+    if ! [ "$(zestty_get_session_state "$_c_name")" = "dne" ]; then
         exit_fail_with_usage \
-            "'$create_name' already exists, use attach instead!" \
-            print_attach_usage
+            "'$_c_name' already exists, use attach instead!" \
+            zestty_attach_usage
     fi
 
-    if ! [ -d "$create_path" ]; then
-        exit_fail "'$create_path' is not a directory!"
+    if ! [ -d "$_c_path" ]; then
+        exit_fail "'$_c_path' is not a directory!"
     else
-        create_path=$(realpath "$create_path")
+        _c_path=$(realpath "$_c_path")
     fi
 
     if [ "$ZELLIJ" = "0" ]; then
-        call_plugin_switch \
-            "$create_name" \
-            "$create_path" \
-            "$create_layout"
+        zestty_call_switch \
+            "$_c_name" \
+            "$_c_path" \
+            "$_c_layout"
     else
         # pushd and popd are bash builtins and are not POSIX compliant
-        cd "$create_path"
+        cd "$_c_path"
 
-        if [ -n "$create_layout" ]; then
+        if [ -n "$_c_layout" ]; then
             exec zellij \
-                --session "$create_name" \
-                --new-session-with-layout "$create_layout"
+                --session "$_c_name" \
+                --new-session-with-layout "$_c_layout"
         else
-            exec zellij --session "$create_name"
+            exec zellij --session "$_c_name"
         fi
 
-        cd "$create_cwd"
+        cd "$_c_cwd"
     fi
 }
 
-attach_command() {
+zestty_attach() {
     if [ "$#" -lt "1" ]; then
         exit_fail_with_usage \
             "Session name required!" \
-            print_attach_usage
+            zestty_attach_usage
     fi
 
-    attach_name="$1"
+    _a_name="$1"
 
-    case "$attach_name" in
+    case "$_a_name" in
         "-?" | "-h" | "--help")
-            print_attach_usage
+            zestty_attach_usage
             exit_success
             ;;
     esac
 
-    if [ "$(get_session_state "$attach_name")" = "dne" ]; then
+    if [ "$(zestty_get_session_state "$_a_name")" = "dne" ]; then
         exit_fail_with_usage \
-            "'$attach_name' does not exist, use create instead!" \
-            print_create_usage
+            "'$_a_name' does not exist, use create instead!" \
+            zestty_create_usage
     fi
 
     if [ "$ZELLIJ" = "0" ]; then
-        call_plugin_switch "$attach_name"
+        zestty_call_switch "$_a_name"
     else
-        exec zellij attach "$attach_name"
+        exec zellij attach "$_a_name"
     fi
 }
 
-zestty_picker() {
-    query=${1-}
-    [ -z "$query" ] && auto_select_option="" || auto_select_option="--select-1"
+zestty_base_picker() {
+    _bp_query=${1-}
+    [ -z "$_bp_query" ] && _bp_select_option="" || _bp_select_option="--select-1"
     shift
 
-    pick_command=$(command -v fzf)
-    if [ -z "$pick_command" ]; then
+    _bp_fzf=$(command -v fzf)
+    if [ -z "$_bp_fzf" ]; then
         exit_fail_with_usage \
             "$(bold fzf) is required for fuzzy finding!" \
-            print_pick_usage
+            zestty_pick_usage
     fi
 
-    command fzf --query="$query" \
+    "$_bp_fzf" --query="$_bp_query" \
         --delimiter="$ZESTTY_DELIM" \
         --layout=reverse --info=hidden --no-separator \
-        --no-multi $auto_select_option --cycle \
+        --no-multi $_bp_select_option --cycle \
         --height=7 --ansi --color=16 \
         "$@"
 }
 
 zestty_name_picker() {
-    query=${1-}
+    _np_query=${1-}
     shift
-    zestty_picker "$query" --with-nth="2" "$@"
+    zestty_base_picker "$_np_query" --with-nth="2" "$@"
 }
 
 zestty_transform_picker() {
-    query=${1-}
-    transform=${2-}
+    _tp_query=${1-}
+    _tp_transform=${2-}
     shift 2
-    zestty_picker "$query" --with-nth="$transform" --nth="1"
+    zestty_base_picker "$_tp_query" --with-nth="$_tp_transform" --nth="1"
 }
 
-pick_command() {
+zestty_pick() {
     if [ "$#" -lt "1" ]; then
-        exit_fail_with_usage "" print_pick_usage
+        exit_fail_with_usage "" zestty_pick_usage
     fi
 
-    pick_list="$1"
+    _p_list="$1"
     shift
-    pick_query="$@"
+    _p_query="$*"
 
-    ZESTTY_DELIM=$'\t'
-    case "$pick_list" in
+    ZESTTY_DELIM=$(printf "\t")
+    case "$_p_list" in
         "-?" | "-h" | "--help" | "h" | "help")
-            print_pick_usage
+            zestty_pick_usage
             exit_success
             ;;
         "z" | "zellij")
-            pick_selected=$(
-                { list_active_sessions; list_dead_sessions; } |
-                zestty_transform_picker "$pick_query" "{2}$ZESTTY_DELIM[{3}]" \
+            _p_selected=$(
+                { zestty_list_active; zestty_list_dead; } |
+                zestty_transform_picker "$_p_query" "{2}$ZESTTY_DELIM[{3}]" \
                     --header="zellij"
             )
             ;;
         "a" | "active")
-            pick_selected=$(
-                list_active_sessions |
-                zestty_name_picker "$pick_query" --header="active"
+            _p_selected=$(
+                zestty_list_active |
+                zestty_name_picker "$_p_query" --header="active"
             )
             ;;
         "d" | "dead")
-            pick_selected=$(
-                list_dead_sessions |
-                zestty_name_picker "$pick_query" --header="dead"
+            _p_selected=$(
+                zestty_list_dead |
+                zestty_name_picker "$_p_query" --header="dead"
             )
             ;;
         "p" | "projects")
-            pick_selected=$(
-                list_projects |
-                zestty_transform_picker "$pick_query" "{2}$ZESTTY_DELIM({3})" \
+            _p_selected=$(
+                zestty_list_projects |
+                zestty_transform_picker "$_p_query" "{2}$ZESTTY_DELIM({3})" \
                     --header="projects"
             )
             ;;
         "w" | "worktrees")
-            pick_selected=$(
-                list_worktrees |
-                zestty_transform_picker "$pick_query" "{3}$ZESTTY_DELIM({2})" \
+            _p_selected=$(
+                zestty_list_worktrees |
+                zestty_transform_picker "$_p_query" "{3}$ZESTTY_DELIM({2})" \
                     --header="worktrees"
             )
             ;;
         "s" | "submodules")
-            pick_selected=$(
-                list_submodules |
-                zestty_transform_picker "$pick_query" "{2}$ZESTTY_DELIM({3})" \
+            _p_selected=$(
+                zestty_list_submodules |
+                zestty_transform_picker "$_p_query" "{2}$ZESTTY_DELIM({3})" \
                     --header="submodules"
             )
             ;;
         *)
             exit_fail_with_usage \
-                "Unknown option '$pick_list'" \
-                print_pick_usage
+                "Unknown option '$_p_list'" \
+                zestty_pick_usage
             ;;
     esac
 
-    if [ -n "$pick_selected" ]; then
-        sessionize_command "$pick_selected"
+    if [ -n "$_p_selected" ]; then
+        zestty_sessionize "$_p_selected"
     fi
 
     return 0
 }
 
-list_active_sessions() {
+zestty_list_active() {
     zellij list-sessions --no-formatting 2> /dev/null | \
     grep -v "EXITED" | \
     cut -d " " -f "1" | \
@@ -411,7 +406,7 @@ list_active_sessions() {
         -e "s/$/${ZESTTY_DELIM}active/"
 }
 
-list_dead_sessions() {
+zestty_list_dead() {
     zellij list-sessions --no-formatting 2> /dev/null | \
     grep "EXITED" | \
     cut -d " " -f "1" | \
@@ -419,29 +414,29 @@ list_dead_sessions() {
         -e "s/$/${ZESTTY_DELIM}dead/"
 }
 
-list_projects() {
-    project_file=$(find_project_file)
-    if [ -z "$project_file" ]; then
+zestty_list_projects() {
+    _lp_project_file=$(zestty_find_project_file)
+    if [ -z "$_lp_project_file" ]; then
         exit_fail "No project file found!"
     fi
 
-    project_list=$(sed \
+    _lp_project_list=$(sed \
         -e "s/$ZESTTY_PROJECT_DELIM/$ZESTTY_DELIM/g" \
         -e "s/^/project$ZESTTY_DELIM/" \
-        "$project_file"
+        "$_lp_project_file"
     )
 
-    if [ -z "$project_list" ]; then
+    if [ -z "$_lp_project_list" ]; then
         warn "Project file has no projects!"
     else
-        echo "$project_list"
+        echo "$_lp_project_list"
     fi
 }
 
-list_worktrees() {
+zestty_list_worktrees() {
     # TODO: use -C to check a specific directory
-    git_root=$(git rev-parse --show-toplevel 2> /dev/null)
-    if [ -z "$git_root" ]; then
+    _lw_git_root=$(git rev-parse --show-toplevel 2> /dev/null)
+    if [ -z "$_lw_git_root" ]; then
         exit_fail "Not in a git repository, cannot list worktrees!"
     fi
 
@@ -460,9 +455,9 @@ list_worktrees() {
     sed -e "s/:/$ZESTTY_DELIM/g" -e "s/^/worktree$ZESTTY_DELIM/"
 }
 
-list_submodules() {
-    git_root=$(git rev-parse --show-toplevel 2> /dev/null)
-    if [ -z "$git_root" ]; then
+zestty_list_submodules() {
+    _ls_git_root=$(git rev-parse --show-toplevel 2> /dev/null)
+    if [ -z "$_ls_git_root" ]; then
         exit_fail "Not in a git repository, cannot list submodules!"
     fi
 
@@ -472,185 +467,185 @@ list_submodules() {
     sed -n "s/^\(.*\/\)\([^\/]*\)$/submodule$ZESTTY_DELIM\2$ZESTTY_DELIM\1\2/p"
 }
 
-list_command() {
+zestty_list() {
     if [ "$#" -lt "1" ]; then
-        exit_fail_with_usage "" print_list_usage
+        exit_fail_with_usage "" zestty_list_usage
     fi
 
-    got_active=1
-    got_dead=1
-    got_projects=1
-    got_worktrees=1
-    got_submodules=1
+    _l_active=1
+    _l_dead=1
+    _l_projects=1
+    _l_worktrees=1
+    _l_submodules=1
     while [ "$#" -ge "1" ]; do
         case "$1" in
             "-?" | "-h" | "--help" | "h" | "help")
-                print_list_usage
+                zestty_list_usage
                 exit_success
                 ;;
-            "z" | "zellij") got_active=0; got_dead=0;;
-            "a" | "active") got_active=0;;
-            "d" | "dead") got_dead=0;;
-            "p" | "projects") got_projects=0;;
-            "w" | "worktrees") got_worktrees=0;;
-            "s" | "submodules") got_submodules=0;;
+            "z" | "zellij") _l_active=0; _l_dead=0;;
+            "a" | "active") _l_active=0;;
+            "d" | "dead") _l_dead=0;;
+            "p" | "projects") _l_projects=0;;
+            "w" | "worktrees") _l_worktrees=0;;
+            "s" | "submodules") _l_submodules=0;;
             *)
                 exit_fail_with_usage \
                     "Unknown option '$1'" \
-                    print_list_usage
+                    zestty_list_usage
                 ;;
         esac
 
         shift
     done
 
-    [ "$got_active" = "0" ] && list_active_sessions
-    [ "$got_dead" = "0" ] && list_dead_sessions
-    [ "$got_projects" = "0" ] && list_projects
-    [ "$got_worktrees" = "0" ] && list_worktrees
-    [ "$got_submodules" = "0" ] && list_submodules
+    [ "$_l_active" = "0" ] && zestty_list_active
+    [ "$_l_dead" = "0" ] && zestty_list_dead
+    [ "$_l_projects" = "0" ] && zestty_list_projects
+    [ "$_l_worktrees" = "0" ] && zestty_list_worktrees
+    [ "$_l_submodules" = "0" ] && zestty_list_submodules
 
     return 0
 }
 
-sessionize_session() {
-    session_name=${1:-}
-    [ -z "$session_name" ] && exit_fail "Session name required!"
+zestty_sessionize_session() {
+    _ss_name=${1:-}
+    [ -z "$_ss_name" ] && exit_fail "Session name required!"
 
-    session_project=$(match_project_name "$session_name")
-    if [ -n "$session_project" ]; then
-        sessionize_command "$session_project"
+    _ss_project=$(zestty_match_project_name "$_ss_name")
+    if [ -n "$_ss_project" ]; then
+        zestty_sessionize "$_ss_project"
         return
     fi
 
-    session_state=$(get_session_state "$session_name")
-    case "$session_state" in
-        "dne") exit_fail "Session '$session_name' no longer exists!";;
-        "dead" | "active") attach_command "$session_name";;
+    _ss_state=$(zestty_get_session_state "$_ss_name")
+    case "$_ss_state" in
+        "dne") exit_fail "Session '$_ss_name' no longer exists!";;
+        "dead" | "active") zestty_attach "$_ss_name";;
     esac
 }
 
-sessionize_project() {
-    project_name=${1:-}
-    project_path=${2:-}
-    project_layout=${3:-}
+zestty_sessionize_project() {
+    _sp_name=${1:-}
+    _sp_path=${2:-}
+    _sp_layout=${3:-}
 
-    if [ -z "$project_name" ]; then
+    if [ -z "$_sp_name" ]; then
         exit_fail "Project name required!"
-    elif [ -z "$project_path" ]; then
+    elif [ -z "$_sp_path" ]; then
         exit_fail "Project path required!"
     fi
 
-    project_abspath=$(echo "$project_path" | sed "s|^~|$HOME|")
-    project_abspath=$(realpath "$project_abspath")
-    if ! [ -d "$project_abspath" ]; then
+    _sp_abspath=$(echo "$_sp_path" | sed "s|^~|$HOME|")
+    _sp_abspath=$(realpath "$_sp_abspath")
+    if ! [ -d "$_sp_abspath" ]; then
         exit_fail "Project path must be a directory!"
     fi
 
-    session_state=$(get_session_state "$project_name")
-    case "$session_state" in
-        "dne") create_command "$project_name" "$project_abspath" "$project_layout";;
+    _sp_state=$(zestty_get_session_state "$_sp_name")
+    case "$_sp_state" in
+        "dne") zestty_create "$_sp_name" "$_sp_abspath" "$_sp_layout";;
         "dead")
-            zellij delete-session "$project_name" > /dev/null
-            create_command "$project_name" "$project_abspath" "$project_layout"
+            zellij delete-session "$_sp_name" > /dev/null
+            zestty_create "$_sp_name" "$_sp_abspath" "$_sp_layout"
             ;;
-        "active") attach_command "$project_name";;
+        "active") zestty_attach "$_sp_name";;
     esac
 }
 
-sessionize_worktree() {
-    worktree_path=${2:-}
+zestty_sessionize_worktree() {
+    _sw_path=${2:-}
 
-    if [ -z "$worktree_path" ]; then
+    if [ -z "$_sw_path" ]; then
         exit_fail "Worktree path required!"
-    elif ! [ -d "$worktree_path" ]; then
+    elif ! [ -d "$_sw_path" ]; then
         exit_fail "Project path must be a directory!"
     fi
 
-    worktree_project=$(match_project_path "$worktree_path")
-    if [ -n "$worktree_project" ]; then
-        sessionize_command "$worktree_project"
+    _sw_project=$(zestty_match_project_path "$_sw_path")
+    if [ -n "$_sw_project" ]; then
+        zestty_sessionize "$_sw_project"
         return
     fi
 
-    worktree_name=$(basename "$worktree_path")
-    worktree_session_state=$(get_session_state "$worktree_name")
-    case "$worktree_session_state" in
-        "dne") create_command "$worktree_name" "$worktree_path";;
-        "dead" | "active") attach_command "$worktree_name";;
+    _sw_name=$(basename "$_sw_path")
+    _sw_state=$(zestty_get_session_state "$_sw_name")
+    case "$_sw_state" in
+        "dne") zestty_create "$_sw_name" "$_sw_path";;
+        "dead" | "active") zestty_attach "$_sw_name";;
     esac
 }
 
-sessionize_submodule() {
-    submodule_name=${1:-}
-    submodule_path=${2:-}
-    submodule_layout=""
+zestty_sessionize_submodule() {
+    _su_name=${1:-}
+    _su_path=${2:-}
+    _su_layout=""
 
-    if [ -z "$submodule_name" ]; then
+    if [ -z "$_su_name" ]; then
         exit_fail "Submodule name required!"
-    elif [ -z "$submodule_path" ]; then
+    elif [ -z "$_su_path" ]; then
         exit_fail "Submodule path required!"
     fi
 
-    submodule_project=$(match_project_name "$submodule_name")
-    if [ -n "$submodule_project" ]; then
+    _su_project=$(zestty_match_project_name "$_su_name")
+    if [ -n "$_su_project" ]; then
         # split project for path and layout
-        sessionize_old_delimiter=$IFS
+        _su_old_delim=$IFS
         IFS="$ZESTTY_DELIM"
-        set -- $submodule_project
-        IFS="$sessionize_old_delimiter"
+        set -- $_su_project
+        IFS="$_su_old_delim"
 
         # get rid of type
         shift
 
-        submodule_name="$1_$submodule_name"
-        submodule_layout="$3"
+        _su_name="$1_$_su_name"
+        _su_layout="$3"
     else
-        submodule_project=$(match_project_path "$submodule_path")
-        if [ -n "$submodule_project" ]; then
-            sessionize_command "$submodule_project"
+        _su_project=$(zestty_match_project_path "$_su_path")
+        if [ -n "$_su_project" ]; then
+            zestty_sessionize "$_su_project"
             return
         fi
     fi
 
-    submodule_session_state=$(get_session_state "$submodule_name")
-    case "$submodule_session_state" in
-        "dne") create_command "$submodule_name" "$submodule_path" "$submodule_layout";;
-        "dead" | "active") attach_command "$submodule_name";;
+    _su_state=$(zestty_get_session_state "$_su_name")
+    case "$_su_state" in
+        "dne") zestty_create "$_su_name" "$_su_path" "$_su_layout";;
+        "dead" | "active") zestty_attach "$_su_name";;
     esac
 }
 
-sessionize_command() {
-    session=${1:-}
-    if [ -z "$session" ]; then
+zestty_sessionize() {
+    _s_session=${1:-}
+    if [ -z "$_s_session" ]; then
         exit_fail_with_usage \
             "A session is required!" \
-            print_sessionize_usage
+            zestty_sessionize_usage
     fi
 
-    case "$session" in
+    case "$_s_session" in
         "-?" | "-h" | "--help" | "h" | "help")
-            print_sessionize_usage
+            zestty_sessionize_usage
             exit_success
             ;;
     esac
 
     # split into arguments for sessionize functions
-    sessionize_old_delimiter=$IFS
+    _s_old_delim=$IFS
     IFS="$ZESTTY_DELIM"
-    set -- $session
-    IFS="$sessionize_old_delimiter"
+    set -- $_s_session
+    IFS="$_s_old_delim"
 
     # pop the type off the arguments
-    sessionize_type=${1:-}
+    _s_type=${1:-}
     shift
 
-    case "$sessionize_type" in
-        "session") sessionize_session "$@";;
-        "project") sessionize_project "$@";;
-        "worktree") sessionize_worktree "$@";;
-        "submodule") sessionize_submodule "$@";;
-        *) exit_fail_with_usage "A session type is required!" print_sessionize_usage;;
+    case "$_s_type" in
+        "session") zestty_sessionize_session "$@";;
+        "project") zestty_sessionize_project "$@";;
+        "worktree") zestty_sessionize_worktree "$@";;
+        "submodule") zestty_sessionize_submodule "$@";;
+        *) exit_fail_with_usage "A session type is required!" zestty_sessionize_usage;;
     esac
 }
 
@@ -660,10 +655,10 @@ if ! zellij setup --check 1> /dev/null; then
 fi
 
 if [ "$#" -lt "1" ]; then
-    exit_fail_with_usage "" print_zestty_usage
+    exit_fail_with_usage "" zestty_usage
 fi
 
-command="$1"
+_z_command="$1"
 shift
 
 # if we are not in a zellij session, explicitly set the ZELLIJ environment
@@ -675,9 +670,9 @@ ZESTTY_DELIM_ENV=${ZESTTY_DELIM:-}
 ZESTTY_PROJECT_DELIM_ENV=${ZESTTY_PROJECT_DELIM:-}
 ZESTTY_PLUGIN_URL_ENV=${ZESTTY_PLUGIN_URL:-}
 
-config_file=$(find_config_file)
-if [ -n "$config_file" ]; then
-    source "$config_file"
+_z_config_file=$(zestty_find_config_file)
+if [ -n "$_z_config_file" ]; then
+    . "$_z_config_file"
 fi
 
 # set to default if not configured
@@ -698,14 +693,14 @@ if [ -n "$ZESTTY_PLUGIN_URL_ENV" ]; then
     ZESTTY_PLUGIN_URL=$ZESTTY_PLUGIN_URL_ENV
 fi
 
-case "$command" in
-    "-?" | "-h" | "--help" | "h" | "help") print_zestty_usage;;
-    "c" | "create") create_command "$@";;
-    "a" | "attach") attach_command "$@";;
-    "p" | "pick") pick_command "$@";;
-    "l" | "list") list_command "$@";;
-    "s" | "sessionize") sessionize_command "$@";;
-    *) exit_fail_with_usage "Unknown command '$command'" print_zestty_usage;;
+case "$_z_command" in
+    "-?" | "-h" | "--help" | "h" | "help") zestty_usage;;
+    "c" | "create") zestty_create "$@";;
+    "a" | "attach") zestty_attach "$@";;
+    "p" | "pick") zestty_pick "$@";;
+    "l" | "list") zestty_list "$@";;
+    "s" | "sessionize") zestty_sessionize "$@";;
+    *) exit_fail_with_usage "Unknown command '$_z_command'" zestty_usage;;
 esac
 
 exit_success
