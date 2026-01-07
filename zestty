@@ -50,8 +50,6 @@ attach      attach to an existing zellij session
 pick        pick from lists and sessionize
 list        list things that can be sessionized
 sessionize  create or attach to a session object
-
-Run each command with no arguments to print its help text.
 EOF
 }
 
@@ -234,6 +232,13 @@ create_command() {
     create_path=${2:-"$create_cwd"}
     create_layout=${3:-}
 
+    case "$create_name" in
+        "-?" | "-h" | "--help")
+            print_create_usage
+            exit_success
+            ;;
+    esac
+
     if ! [ "$(get_session_state "$create_name")" = "dne" ]; then
         exit_fail_with_usage \
             "'$create_name' already exists, use attach instead!" \
@@ -275,6 +280,13 @@ attach_command() {
     fi
 
     attach_name="$1"
+
+    case "$attach_name" in
+        "-?" | "-h" | "--help")
+            print_attach_usage
+            exit_success
+            ;;
+    esac
 
     if [ "$(get_session_state "$attach_name")" = "dne" ]; then
         exit_fail_with_usage \
@@ -333,6 +345,10 @@ pick_command() {
 
     ZESTTY_DELIM=$'\t'
     case "$pick_list" in
+        "-?" | "-h" | "--help" | "h" | "help")
+            print_pick_usage
+            exit_success
+            ;;
         "z" | "zellij")
             pick_selected=$(
                 { list_active_sessions; list_dead_sessions; } |
@@ -468,6 +484,10 @@ list_command() {
     got_submodules=1
     while [ "$#" -ge "1" ]; do
         case "$1" in
+            "-?" | "-h" | "--help" | "h" | "help")
+                print_list_usage
+                exit_success
+                ;;
             "z" | "zellij") got_active=0; got_dead=0;;
             "a" | "active") got_active=0;;
             "d" | "dead") got_dead=0;;
@@ -607,6 +627,13 @@ sessionize_command() {
             "A session is required!" \
             print_sessionize_usage
     fi
+
+    case "$session" in
+        "-?" | "-h" | "--help" | "h" | "help")
+            print_sessionize_usage
+            exit_success
+            ;;
+    esac
 
     # split into arguments for sessionize functions
     sessionize_old_delimiter=$IFS
