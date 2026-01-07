@@ -468,25 +468,12 @@ list_command() {
     got_submodules=1
     while [ "$#" -ge "1" ]; do
         case "$1" in
-            "-z" | "--zellij")
-                got_active=0
-                got_dead=0
-                ;;
-            "-a" | "--active")
-                got_active=0
-                ;;
-            "-d" | "--dead")
-                got_dead=0
-                ;;
-            "-p" | "--projects")
-                got_projects=0
-                ;;
-            "-w" | "--worktrees")
-                got_worktrees=0
-                ;;
-            "-s" | "--submodules")
-                got_submodules=0
-                ;;
+            "-z" | "--zellij") got_active=0; got_dead=0;;
+            "-a" | "--active") got_active=0;;
+            "-d" | "--dead") got_dead=0;;
+            "-p" | "--projects") got_projects=0;;
+            "-w" | "--worktrees") got_worktrees=0;;
+            "-s" | "--submodules") got_submodules=0;;
             *)
                 exit_fail_with_usage \
                     "Unknown option '$1'" \
@@ -518,12 +505,8 @@ sessionize_session() {
 
     session_state=$(get_session_state "$session_name")
     case "$session_state" in
-        "dne")
-            exit_fail "Session '$session_name' no longer exists!"
-            ;;
-        "dead" | "active")
-            attach_command "$session_name"
-            ;;
+        "dne") exit_fail "Session '$session_name' no longer exists!";;
+        "dead" | "active") attach_command "$session_name";;
     esac
 }
 
@@ -546,16 +529,12 @@ sessionize_project() {
 
     session_state=$(get_session_state "$project_name")
     case "$session_state" in
-        "dne")
-            create_command "$project_name" "$project_abspath" "$project_layout"
-            ;;
+        "dne") create_command "$project_name" "$project_abspath" "$project_layout";;
         "dead")
             zellij delete-session "$project_name" > /dev/null
             create_command "$project_name" "$project_abspath" "$project_layout"
             ;;
-        "active")
-            attach_command "$project_name"
-            ;;
+        "active") attach_command "$project_name";;
     esac
 }
 
@@ -577,12 +556,8 @@ sessionize_worktree() {
     worktree_name=$(basename "$worktree_path")
     worktree_session_state=$(get_session_state "$worktree_name")
     case "$worktree_session_state" in
-        "dne")
-            create_command "$worktree_name" "$worktree_path"
-            ;;
-        "dead" | "active")
-            attach_command "$worktree_name"
-            ;;
+        "dne") create_command "$worktree_name" "$worktree_path";;
+        "dead" | "active") attach_command "$worktree_name";;
     esac
 }
 
@@ -620,12 +595,8 @@ sessionize_submodule() {
 
     submodule_session_state=$(get_session_state "$submodule_name")
     case "$submodule_session_state" in
-        "dne")
-            create_command "$submodule_name" "$submodule_path" "$submodule_layout"
-            ;;
-        "dead" | "active")
-            attach_command "$submodule_name"
-            ;;
+        "dne") create_command "$submodule_name" "$submodule_path" "$submodule_layout";;
+        "dead" | "active") attach_command "$submodule_name";;
     esac
 }
 
@@ -648,23 +619,11 @@ sessionize_command() {
     shift
 
     case "$sessionize_type" in
-        "session")
-            sessionize_session "$@"
-            ;;
-        "project")
-            sessionize_project "$@"
-            ;;
-        "worktree")
-            sessionize_worktree "$@"
-            ;;
-        "submodule")
-            sessionize_submodule "$@"
-            ;;
-        *)
-            exit_fail_with_usage \
-                "A session type is required!" \
-                print_sessionize_usage
-            ;;
+        "session") sessionize_session "$@";;
+        "project") sessionize_project "$@";;
+        "worktree") sessionize_worktree "$@";;
+        "submodule") sessionize_submodule "$@";;
+        *) exit_fail_with_usage "A session type is required!" print_sessionize_usage;;
     esac
 }
 
@@ -713,28 +672,13 @@ if [ -n "$ZESTTY_PLUGIN_URL_ENV" ]; then
 fi
 
 case "$command" in
-    "-?" | "-h" | "--help" | "help")
-        print_zestty_usage
-        ;;
-    "create")
-        create_command "$@"
-        ;;
-    "attach")
-        attach_command "$@"
-        ;;
-    "pick")
-        pick_command "$@"
-        ;;
-    "list")
-        list_command "$@"
-        ;;
-    "sessionize")
-        sessionize_command "$@"
-        ;;
-    *)
-        exit_fail_with_usage \
-            "Unknown command '$command'" \
-            print_zestty_usage
+    "-?" | "-h" | "--help" | "help") print_zestty_usage;;
+    "create") create_command "$@";;
+    "attach") attach_command "$@";;
+    "pick") pick_command "$@";;
+    "list") list_command "$@";;
+    "sessionize") sessionize_command "$@";;
+    *) exit_fail_with_usage "Unknown command '$command'" print_zestty_usage;;
 esac
 
 exit_success
