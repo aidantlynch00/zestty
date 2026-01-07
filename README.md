@@ -10,7 +10,7 @@ zestty offers `zestty create` and `zestty attach` commands as replacements for t
 TODO: add GIF creating a session within a session
 
 ### Session Lists
-zestty prints several different lists of sessionizable objects. There are several different things that can be sessionized:
+The `zestty list` command prints several different lists of sessionizable objects:
 - zellij sessions
     - active sessions
     - dead sessions
@@ -21,23 +21,22 @@ zestty prints several different lists of sessionizable objects. There are severa
 
 TODO: add GIF listing project sessions
 
+### Picking Sessions
+If you have [fzf](https://github.com/junegunn/fzf) installed, you can use `zestty pick` to fuzzy find over session lists, moving you to the session of your choosing.
+
+TODO: add GIF fuzzy finding over project list
+
 ### Sessionize
-Each sessionizable object has a corresponding sessionizer that creates or attaches to a zellij session. Simply pass a line from one of the session lists to move to that session. zestty is project-centric and employs a few a tricks to make sessionizing feel smart.
+Each sessionizable object has a corresponding sessionizer that creates or attaches to a zellij session. The `zestty sessionize` command is what powers session picking. Simply pass a line from one of the session lists to move to that session.
+
+#### Smart Sessionizing
+zestty is project-centric and employs a few a tricks to make sessionizing feel smart.
 
 For dead zellij sessions, if the name matches a project name, the project session is deleted and recreated. This is preferred to zellij session resurrection, which prevents commands from running immediately on attach. There is the `--force-run-commands` flag to `zellij attach`, but I find that is not a sensible default in case I unknowingly had a destructive command running in a pane. This happens when sessionizing both the `session` and `project` types.
 
 For the `worktree` type, if the path matches the path of a project, it is sessionized as that project. I personally use this to have a code review worktree that has a different layout for reviewing changes.
 
 For the `submodule` type, if the name matches a project name, the project's layout is used when sessionizing and the new session will be in the submodule directory. Like with worktrees, if the path matches the path of a project, it is sessionized as that project.
-
-## Fuzzy Finding
-`zestty list` and `zestty sessionize` can be married with a fuzzy finder to build pickers for your sessions. The following shell function can be used to pick over your projects:
-
-```sh
-# TODO: project picker
-```
-
-TODO: add GIF fuzzy finding in project list
 
 ## Configuration
 
@@ -56,8 +55,8 @@ This file is sourced at runtime to configure certain values. All of the followin
 #### Delimiters
 zestty allows the user to configure the delimiters used in session lines.
 
-`ZESTTY_DELIM`: changes the delimiter zestty uses when listing and sessionizing sessions (default ':').
-`ZESTTY_PROJECT_DELIM`: changes the delimiter zestty uses to split lines in the projects file (default ':').
+`ZESTTY_DELIM`: single character, changes the delimiter zestty uses when listing and sessionizing sessions (default ':').
+`ZESTTY_PROJECT_DELIM`: single character, changes the delimiter zestty uses to split lines in the projects file (default ':').
 
 #### Plugin URL
 `ZESTTY_PLUGIN_URL`: changes the plugin location zestty uses when communicating with the zestty plugin (default 'https://github.com/aidantlynch00/zestty/releases/latest/download/zestty.wasm').

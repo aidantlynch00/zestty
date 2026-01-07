@@ -29,10 +29,10 @@ exit_fail_with_usage() {
 
     if [ -n "$with_usage_message" ]; then
         error "$with_usage_message"
+        [ -n "$with_usage_function" ] && echo
     fi
 
     if [ -n "$with_usage_function" ]; then
-        echo
         eval "$with_usage_function"
     fi
 
@@ -47,6 +47,7 @@ $(bold "Available commands")
 help        print this message
 create      create a zellij session with a name, layout, and working directory
 attach      attach to an existing zellij session
+pick        pick from lists and sessionize
 list        list things that can be sessionized
 sessionize  create or attach to a session object
 
@@ -74,6 +75,23 @@ name    name of the session
 EOF
 }
 
+print_pick_usage() {
+    cat <<EOF
+usage: zestty pick < -z | -a | -d | -p | -w | -s > [query]
+
+$(bold "Options")
+-z, --zellij        pick zellij sessions
+-a, --active        pick only active zellij sessions
+-d, --dead          pick only dead zellij sessions
+-p, --projects      pick projects from the projects file
+-w, --worktrees     pick git worktrees
+-s, --submodules    pick git submodules
+
+$(bold "Parameters")
+query   initial query for fuzzy finder
+EOF
+}
+
 print_list_usage() {
     cat <<EOF
 usage: zestty list [-z] [-a] [-d] [-p] [-w] [-s]
@@ -92,8 +110,11 @@ print_sessionize_usage() {
     cat <<EOF
 usage: zestty sessionize <session>
 
+$(bold "Parameters")
+session     session object to sessionize
+
 $(bold "Builtin session types")
-session     session:<name>
+session     session:<name>:<state>
 project     project:<name>:<path>:[layout]
 worktree    worktree:<ref>:<path>
 submodule   submodule:<name>:<path>
@@ -268,24 +289,118 @@ attach_command() {
     fi
 }
 
+zestty_picker() {
+    query=${1-}
+    [ -z "$query" ] && auto_select_option="" || auto_select_option="--select-1"
+    shift
+
+    pick_command=$(command -v fzf)
+    if [ -z "$pick_command" ]; then
+        exit_fail_with_usage \
+            "$(bold fzf) is required for fuzzy finding!" \
+            print_pick_usage
+    fi
+
+    command fzf --query="$query" \
+        --delimiter="$ZESTTY_DELIM" \
+        --layout=reverse --info=hidden --no-separator \
+        --no-multi $auto_select_option --cycle \
+        --height=7 --ansi --color=16 \
+        "$@"
+}
+
+zestty_name_picker() {
+    query=${1-}
+    shift
+    zestty_picker "$query" --with-nth="2" "$@"
+}
+
+zestty_transform_picker() {
+    query=${1-}
+    transform=${2-}
+    shift 2
+    zestty_picker "$query" --with-nth="$transform" --nth="1"
+}
+
+pick_command() {
+    if [ "$#" -lt "1" ]; then
+        exit_fail_with_usage "" print_pick_usage
+    fi
+
+    pick_list="$1"
+    shift
+    pick_query="$@"
+
+    ZESTTY_DELIM=$'\t'
+    case "$pick_list" in
+        "-z" | "--zellij")
+            pick_selected=$(
+                { list_active_sessions; list_dead_sessions; } |
+                zestty_transform_picker "$pick_query" "{2}$ZESTTY_DELIM[{3}]" \
+                    --header="zellij"
+            )
+            ;;
+        "-a" | "--active")
+            pick_selected=$(
+                list_active_sessions |
+                zestty_name_picker "$pick_query" --header="active"
+            )
+            ;;
+        "-d" | "--dead")
+            pick_selected=$(
+                list_dead_sessions |
+                zestty_name_picker "$pick_query" --header="dead"
+            )
+            ;;
+        "-p" | "--projects")
+            pick_selected=$(
+                list_projects |
+                zestty_transform_picker "$pick_query" "{2}$ZESTTY_DELIM({3})" \
+                    --header="projects"
+            )
+            ;;
+        "-w" | "--worktrees")
+            pick_selected=$(
+                list_worktrees |
+                zestty_transform_picker "$pick_query" "{3}$ZESTTY_DELIM({2})" \
+                    --header="worktrees"
+            )
+            ;;
+        "-s" | "--submodules")
+            pick_selected=$(
+                list_submodules |
+                zestty_transform_picker "$pick_query" "{2}$ZESTTY_DELIM({3})" \
+                    --header="submodules"
+            )
+            ;;
+        *)
+            exit_fail_with_usage \
+                "Unknown option '$pick_list'" \
+                print_pick_usage
+            ;;
+    esac
+
+    if [ -n "$pick_selected" ]; then
+        sessionize_command "$pick_selected"
+    fi
+
+    return 0
+}
+
 list_active_sessions() {
     zellij list-sessions --no-formatting 2> /dev/null | \
     grep -v "EXITED" | \
     cut -d " " -f "1" | \
-    sed "s/^/session$ZESTTY_DELIM/"
+    sed -e "s/^/session$ZESTTY_DELIM/" \
+        -e "s/$/${ZESTTY_DELIM}active/"
 }
 
 list_dead_sessions() {
     zellij list-sessions --no-formatting 2> /dev/null | \
     grep "EXITED" | \
     cut -d " " -f "1" | \
-    sed "s/^/session$ZESTTY_DELIM/"
-}
-
-list_all_sessions() {
-    zellij list-sessions --no-formatting 2> /dev/null | \
-    cut -d " " -f "1" | \
-    sed "s/^/session$ZESTTY_DELIM/"
+    sed -e "s/^/session$ZESTTY_DELIM/" \
+        -e "s/$/${ZESTTY_DELIM}dead/"
 }
 
 list_projects() {
@@ -382,14 +497,8 @@ list_command() {
         shift
     done
 
-    if [ "$got_active" = "0" ] && [ "$got_dead" = "0" ]; then
-        list_all_sessions
-    elif [ "$got_active" = "0" ]; then
-        list_active_sessions
-    elif [ "$got_dead" = "0" ]; then
-        list_dead_sessions
-    fi
-
+    [ "$got_active" = "0" ] && list_active_sessions
+    [ "$got_dead" = "0" ] && list_dead_sessions
     [ "$got_projects" = "0" ] && list_projects
     [ "$got_worktrees" = "0" ] && list_worktrees
     [ "$got_submodules" = "0" ] && list_submodules
@@ -612,6 +721,9 @@ case "$command" in
         ;;
     "attach")
         attach_command "$@"
+        ;;
+    "pick")
+        pick_command "$@"
         ;;
     "list")
         list_command "$@"
