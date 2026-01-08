@@ -1,23 +1,36 @@
 #!/bin/sh
-set -e
 
-rm "release/zestty.tar.gz" "release/zestty.zip"
+release_dir=$(realpath ./release)
+if ! [ -d "$release_dir" ]; then
+    exit 1
+fi
+
+# clean any old release artifacts
+rm "$release_dir"/*
+
+# build the zestty plugin
 cargo build --release
 
-dir=$(mktemp -d)
+# create a temp directory for archival
+tmp_dir=$(mktemp -d)
 
+# copy release files into temp directory
 files="README.md zestty target/wasm32-wasip1/release/zestty.wasm"
 names=""
 for file in $files; do
     name=$(basename "$file")
     names="$names $name"
-    cp "$file" "$dir"
+    cp "$file" "$tmp_dir"
 done
 
-pushd "$dir"
+pushd "$tmp_dir"
+
+# archive release files
 tar czf "zestty.tar.gz" $names
 zip "zestty.zip" $names
-popd
 
-cp "$dir/zestty.tar.gz" "$dir/zestty.zip" "release/"
-rm -rf "$dir"
+# copy everything to release directory
+cp ./* "$release_dir"
+
+popd
+rm -rf "$tmp_dir"

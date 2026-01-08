@@ -11,10 +11,10 @@ TODO: add GIF creating a session within a session
 
 ### Session Lists
 The `zestty list` command prints several different lists of sessionizable objects:
-- zellij sessions
+- zellij
     - active sessions
     - dead sessions
-- projects
+- your projects
 - git (must be in git repo)
     - worktrees
     - submodules
@@ -61,7 +61,7 @@ zestty allows the user to configure the delimiters used in session lines.
 #### Plugin URL
 `ZESTTY_PLUGIN_URL`: changes the plugin location zestty uses when communicating with the zestty plugin (default 'https://github.com/aidantlynch00/zestty/releases/latest/download/zestty.wasm').
 
-The zestty script defaults to using the latest GitHub release of the zestty plugin when piping commands to it, removing the need to add the plugin to your zellij configuration. However, I prefer to have my software available offline just in case, so I use `ZESTTY_PLUGIN_URL` to point to an offline copy of the plugin. I wrote the source, I better be using the binary I have built on my machine!
+The zestty script defaults to using the latest GitHub release of the zestty plugin when piping commands to it, removing the need to add the plugin to your zellij configuration. However, I prefer to have my software available offline just in case, so I use `ZESTTY_PLUGIN_URL` to point to an offline copy of the plugin. I wrote the source, I better be using the binary I built on my machine!
 
 ## Extending zestty
 Coming soon!
