@@ -204,7 +204,7 @@ zestty_match_project_path() {
     while read -r _mpp_project; do
         _mpp_actual_relpath=$(echo "$_mpp_project" | cut -d "$ZESTTY_PROJECT_DELIM" -f "2")
         _mpp_actual_relpath=$(echo "$_mpp_actual_relpath" | sed "s|^~|$HOME|")
-        _mpp_actual_abspath=$(realpath "$relpath")
+        _mpp_actual_abspath=$(realpath "$_mpp_actual_relpath")
 
         if [ "$_mpp_expected_abspath" = "$_mpp_actual_abspath" ]; then
             echo "$_mpp_project" |
@@ -347,7 +347,7 @@ zestty_pick() {
         "z" | "zellij")
             _p_selected=$(
                 { zestty_list_active; zestty_list_dead; } |
-                zestty_transform_picker "$_p_query" "{2}$ZESTTY_DELIM[{3}]" \
+                zestty_transform_picker "$_p_query" "{2}${ZESTTY_DELIM}[{3}]" \
                     --header="zellij"
             )
             ;;
@@ -366,21 +366,21 @@ zestty_pick() {
         "p" | "projects")
             _p_selected=$(
                 zestty_list_projects |
-                zestty_transform_picker "$_p_query" "{2}$ZESTTY_DELIM({3})" \
+                zestty_transform_picker "$_p_query" "{2}${ZESTTY_DELIM}({3})" \
                     --header="projects"
             )
             ;;
         "w" | "worktrees")
             _p_selected=$(
                 zestty_list_worktrees |
-                zestty_transform_picker "$_p_query" "{3}$ZESTTY_DELIM({2})" \
+                zestty_transform_picker "$_p_query" "{3}${ZESTTY_DELIM}({2})" \
                     --header="worktrees"
             )
             ;;
         "s" | "submodules")
             _p_selected=$(
                 zestty_list_submodules |
-                zestty_transform_picker "$_p_query" "{2}$ZESTTY_DELIM({3})" \
+                zestty_transform_picker "$_p_query" "{2}${ZESTTY_DELIM}({3})" \
                     --header="submodules"
             )
             ;;
