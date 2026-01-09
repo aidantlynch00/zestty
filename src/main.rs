@@ -5,7 +5,9 @@ use serde::{Serialize, Deserialize};
 use serde_json;
 
 #[derive(Default)]
-struct Zestty;
+struct Zestty {
+    permission_granted: bool,
+}
 
 register_plugin!(Zestty);
 
@@ -25,13 +27,26 @@ enum Command {
 
 impl ZellijPlugin for Zestty {
     fn load(&mut self, _configuration: BTreeMap<String, String>) {
+        subscribe(&[
+            EventType::PermissionRequestResult,
+        ]);
+
         request_permission(&[
             PermissionType::ReadApplicationState,
             PermissionType::ChangeApplicationState,
         ]);
     }
 
-    fn update(&mut self, _event: Event) -> bool { false }
+    fn update(&mut self, event: Event) -> bool {
+        match event {
+            Event::PermissionRequestResult(status) => {
+                self.permission_granted = matches!(status, PermissionStatus::Granted);
+            },
+            _ => {}
+        }
+
+        return false;
+    }
 
     fn pipe(&mut self, pipe_message: PipeMessage) -> bool {
         let payload = match pipe_message.payload {
@@ -68,6 +83,11 @@ impl Zestty {
         };
 
         switch_session_with_layout(name, layout, cwd);
-        close_self();
+
+        // close the plugin window if the user has already granted permissions
+        // to zestty, otherwise, keep it open for that purpose
+        if self.permission_granted {
+            close_self();
+        }
     }
 }
