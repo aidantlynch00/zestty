@@ -30,7 +30,7 @@ exit_fail_with_usage() {
         [ -n "$_efwu_function" ] && echo
     fi
 
-    [ -n "$_efwu_function" ] && eval "$_efwu_function"
+    [ -n "$_efwu_function" ] && "$_efwu_function"
     exit 1
 }
 
@@ -213,6 +213,10 @@ zestty_match_project_path() {
             return
         fi
     done < "$_mpp_project_file"
+}
+
+zestty_function_exists() {
+    type -- "$1" 2> /dev/null | grep -q "function"
 }
 
 zestty_create() {
@@ -483,29 +487,59 @@ zestty_list() {
                 zestty_list_usage
                 exit_success
                 ;;
-            "z" | "zellij") _l_active=0; _l_dead=0;;
-            "a" | "active") _l_active=0;;
-            "d" | "dead") _l_dead=0;;
-            "p" | "projects") _l_projects=0;;
-            "w" | "worktrees") _l_worktrees=0;;
-            "s" | "submodules") _l_submodules=0;;
+            "z" | "zellij")
+                [ "$_l_active" = "1" ] && _l_active=0 && zestty_list_active
+                [ "$_l_dead" = "1" ] && _l_dead=0 && zestty_list_dead
+                ;;
+            "a" | "active")
+                [ "$_l_active" = "1" ] && _l_active=0 && zestty_list_active
+                ;;
+            "d" | "dead")
+                [ "$_l_dead" = "1" ] && _l_dead=0 && zestty_list_dead
+                ;;
+            "p" | "projects")
+                [ "$_l_projects" = "1" ] && _l_projects=0 && zestty_list_projects
+                ;;
+            "w" | "worktrees")
+                [ "$_l_worktrees" = "1" ] && _l_worktrees=0 && zestty_list_worktrees
+                ;;
+            "s" | "submodules")
+                [ "$_l_submodules" = "1" ] && _l_submodules=0 && zestty_list_submodules
+                ;;
             *)
-                exit_fail_with_usage \
-                    "Unknown option '$1'" \
-                    zestty_list_usage
+                _l_function="zestty_list_$1"
+                if zestty_function_exists "$_l_function"; then
+                    "$_l_function"
+                else
+                    exit_fail_with_usage \
+                        "Unknown option '$1'" \
+                        zestty_list_usage
+                fi
                 ;;
         esac
 
         shift
     done
 
-    [ "$_l_active" = "0" ] && zestty_list_active
-    [ "$_l_dead" = "0" ] && zestty_list_dead
-    [ "$_l_projects" = "0" ] && zestty_list_projects
-    [ "$_l_worktrees" = "0" ] && zestty_list_worktrees
-    [ "$_l_submodules" = "0" ] && zestty_list_submodules
-
     return 0
+}
+
+zestty_split_string() {
+    _ss_string=${1-}
+
+    # split into arguments for sessionize functions
+    _ss_old_delim=$IFS
+    IFS="$ZESTTY_DELIM"
+    set -- $_ss_string
+    IFS="$_ss_old_delim"
+
+    # save shell quoted array to string, from Rich's shell tricks:
+    # https://www.etalabs.net/sh_tricks.html
+    for arg; do
+        printf "%s\n" "$arg" | sed "s/'/'\\\\''/g;1s/^/'/;\$s/\$/' \\\\/"
+        shift
+    done
+    echo " "
 }
 
 zestty_sessionize_session() {
@@ -589,16 +623,10 @@ zestty_sessionize_submodule() {
 
     _su_project=$(zestty_match_project_name "$_su_name")
     if [ -n "$_su_project" ]; then
-        # split project for path and layout
-        _su_old_delim=$IFS
-        IFS="$ZESTTY_DELIM"
-        set -- $_su_project
-        IFS="$_su_old_delim"
+        _su_array=$(zestty_split_string "$_su_project")
+        eval "set -- $_su_array"
 
-        # get rid of type
-        shift
-
-        _su_name="$1_$_su_name"
+        _su_name="${1}_${_su_name}"
         _su_layout="$3"
     else
         _su_project=$(zestty_match_project_path "$_su_path")
@@ -631,10 +659,8 @@ zestty_sessionize() {
     esac
 
     # split into arguments for sessionize functions
-    _s_old_delim=$IFS
-    IFS="$ZESTTY_DELIM"
-    set -- $_s_session
-    IFS="$_s_old_delim"
+    _s_array=$(zestty_split_string "$_s_session")
+    eval "set -- $_s_array"
 
     # pop the type off the arguments
     _s_type=${1:-}
@@ -645,7 +671,16 @@ zestty_sessionize() {
         "project") zestty_sessionize_project "$@";;
         "worktree") zestty_sessionize_worktree "$@";;
         "submodule") zestty_sessionize_submodule "$@";;
-        *) exit_fail_with_usage "A session type is required!" zestty_sessionize_usage;;
+        *)
+            _s_function="zestty_sessionize_$_s_type"
+            if zestty_function_exists "$_s_function"; then
+                "$_s_function" "$@"
+            else
+                exit_fail_with_usage \
+                    "A session type is required!" \
+                    zestty_sessionize_usage
+            fi
+            ;;
     esac
 }
 
