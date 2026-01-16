@@ -1,9 +1,16 @@
 [package]
 name = "zestty"
 version = "0.1.0"
+authors = ["Aidan Lynch <aidantlynch00@gmail.com>"]
 edition = "2024"
+repository = "https://github.com/aidantlynch00/zestty"
+
+[features]
+tracing = []
 
 [dependencies]
 serde = { version = "1.0.228", features = ["alloc", "derive"] }
 serde_json = "1.0.148"
+tracing = "0.1.44"
+tracing-subscriber = "0.3.22"
 zellij-tile = "0.43.1"

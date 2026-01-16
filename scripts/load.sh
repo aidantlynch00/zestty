@@ -4,10 +4,10 @@
 set -e
 
 if [ -n "$1" ] && [ "$1" = "release" ]; then
-    cargo build --release
-    zellij action start-or-reload-plugin file:target/wasm32-wasip1/release/zestty.wasm
+    cargo build --release --features tracing
+    zellij plugin --skip-plugin-cache -- file:target/wasm32-wasip1/release/zestty.wasm
 else
-    cargo build
-    zellij action start-or-reload-plugin file:target/wasm32-wasip1/debug/zestty.wasm
+    cargo build --features tracing
+    zellij plugin --skip-plugin-cache -- file:target/wasm32-wasip1/debug/zestty.wasm
 fi
 

@@ -4,6 +4,28 @@ use zellij_tile::prelude::*;
 use serde::{Serialize, Deserialize};
 use serde_json;
 
+#[cfg(feature = "tracing")]
+pub fn init_tracing() {
+    use std::fs::File;
+    use std::sync::Arc;
+    use tracing_subscriber::layer::SubscriberExt;
+
+    let file = File::create("/host/zestty.log");
+    let file = match file {
+        Ok(file) => file,
+        Err(error) => panic!("error creating log file: {:?}", error)
+    };
+
+    let writer = tracing_subscriber::fmt::layer()
+        .with_writer(Arc::new(file));
+
+    let subscriber = tracing_subscriber::registry()
+        .with(writer);
+
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("failed to init tracing");
+}
+
 #[derive(Default)]
 struct Zestty {
     permission_granted: bool,
@@ -11,7 +33,7 @@ struct Zestty {
 
 register_plugin!(Zestty);
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct SwitchArgs {
     name: Option<String>,
     path: Option<String>,
@@ -26,17 +48,31 @@ enum Command {
 }
 
 impl ZellijPlugin for Zestty {
+    #[tracing::instrument(skip_all)]
     fn load(&mut self, _configuration: BTreeMap<String, String>) {
-        subscribe(&[
-            EventType::PermissionRequestResult,
-        ]);
+        #[cfg(feature = "tracing")]
+        {
+            init_tracing();
+            tracing::debug!("tracing initialized");
+        }
 
-        request_permission(&[
+        let events = &[
+            EventType::PermissionRequestResult,
+        ];
+
+        subscribe(events);
+        tracing::info!("subscribed to {:?}", events);
+
+        let permissions = &[
             PermissionType::ReadApplicationState,
             PermissionType::ChangeApplicationState,
-        ]);
+        ];
+
+        request_permission(permissions);
+        tracing::info!("requested permissions {:?}", permissions);
     }
 
+    #[tracing::instrument(skip_all)]
     fn update(&mut self, event: Event) -> bool {
         match event {
             Event::PermissionRequestResult(status) => {
@@ -45,9 +81,10 @@ impl ZellijPlugin for Zestty {
             _ => {}
         }
 
-        return false;
+        false
     }
 
+    #[tracing::instrument(skip_all)]
     fn pipe(&mut self, pipe_message: PipeMessage) -> bool {
         let payload = match pipe_message.payload {
             Some(payload) => payload,
@@ -57,7 +94,7 @@ impl ZellijPlugin for Zestty {
         let command = match serde_json::from_str::<Command>(&payload) {
             Ok(command) => command,
             Err(de_err) => {
-                eprintln!("could not deserialize command: {}", de_err);
+                tracing::error!("could not deserialize command: {}", de_err);
                 return false;
             },
         };
@@ -66,15 +103,21 @@ impl ZellijPlugin for Zestty {
             Command::Switch(args) => self.switch(args),
         }
 
-        return false;
+        false
     }
 
+    #[tracing::instrument(skip_all)]
     fn render(&mut self, _rows: usize, _cols: usize) { }
 }
 
 impl Zestty {
+    #[tracing::instrument(skip_all)]
     fn switch(&self, args: SwitchArgs) {
+        tracing::trace!("switch called");
+
+        tracing::debug!("switching session with args {:?}", args);
         let SwitchArgs { name, path, layout } = args;
+
         let name = name.as_deref();
         let cwd = path.map(PathBuf::from);
         let layout = match layout {
