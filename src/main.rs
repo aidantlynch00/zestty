@@ -28,7 +28,9 @@ pub fn init_tracing() {
 
 #[derive(Default)]
 struct Zestty {
-    permission_granted: bool,
+    buffered_events: Vec<Event>,
+    buffered_command: Option<Command>,
+    permission_granted: Option<bool>,
 }
 
 register_plugin!(Zestty);
@@ -74,11 +76,23 @@ impl ZellijPlugin for Zestty {
 
     #[tracing::instrument(skip_all)]
     fn update(&mut self, event: Event) -> bool {
-        match event {
-            Event::PermissionRequestResult(status) => {
-                self.permission_granted = matches!(status, PermissionStatus::Granted);
+        match (&self.permission_granted, &event) {
+            (None, Event::PermissionRequestResult(PermissionStatus::Granted)) => {
+                tracing::info!("permission granted");
+                self.permission_granted = Some(true);
+                self.finish_setup();
+                self.handle_command();
             },
-            _ => {}
+            (_, Event::PermissionRequestResult(PermissionStatus::Denied)) => {
+                self.permission_granted = Some(false);
+            },
+            (None, _) => {
+                self.buffered_events.push(event);
+            },
+            (Some(true), _) => {
+                self.handle_event(event);
+            },
+            (Some(false), _) => { }
         }
 
         false
@@ -112,6 +126,24 @@ impl ZellijPlugin for Zestty {
 
 impl Zestty {
     #[tracing::instrument(skip_all)]
+    fn handle_event(&mut self, event: Event) {
+        match event {
+            _ => { }
+        }
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn handle_command(&mut self) {
+        if let Some(command) = self.buffered_command.take() {
+            match command {
+                Command::Switch(args) => self.switch(args),
+            }
+
+            self.buffered_command = None;
+        }
+    }
+
+    #[tracing::instrument(skip_all)]
     fn switch(&self, args: SwitchArgs) {
         tracing::trace!("switch called");
 
@@ -126,11 +158,17 @@ impl Zestty {
         };
 
         switch_session_with_layout(name, layout, cwd);
+    }
 
-        // close the plugin window if the user has already granted permissions
-        // to zestty, otherwise, keep it open for that purpose
-        if self.permission_granted {
-            close_self();
+    #[tracing::instrument(skip_all)]
+    fn finish_setup(&mut self) {
+        tracing::debug!("hiding plugin pane and making it unselectable");
+        hide_self();
+        set_selectable(false);
+
+        while self.buffered_events.len() > 0 {
+            let event = self.buffered_events.pop().unwrap();
+            self.handle_event(event);
         }
     }
 }
