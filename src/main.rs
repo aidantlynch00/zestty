@@ -31,6 +31,8 @@ struct Zestty {
     buffered_events: Vec<Event>,
     buffered_command: Option<Command>,
     permission_granted: Option<bool>,
+    session_list: Option<Vec<SessionInfo>>,
+    client_id: Option<u16>,
 }
 
 register_plugin!(Zestty);
@@ -60,6 +62,8 @@ impl ZellijPlugin for Zestty {
 
         let events = &[
             EventType::PermissionRequestResult,
+            EventType::SessionUpdate,
+            EventType::ListClients,
         ];
 
         subscribe(events);
@@ -72,6 +76,9 @@ impl ZellijPlugin for Zestty {
 
         request_permission(permissions);
         tracing::info!("requested permissions {:?}", permissions);
+
+        list_clients();
+        tracing::info!("requested client list");
     }
 
     #[tracing::instrument(skip_all)]
@@ -81,10 +88,10 @@ impl ZellijPlugin for Zestty {
                 tracing::info!("permission granted");
                 self.permission_granted = Some(true);
                 self.finish_setup();
-                self.handle_command();
             },
             (_, Event::PermissionRequestResult(PermissionStatus::Denied)) => {
                 self.permission_granted = Some(false);
+                close_self();
             },
             (None, _) => {
                 self.buffered_events.push(event);
@@ -113,9 +120,8 @@ impl ZellijPlugin for Zestty {
             },
         };
 
-        match command {
-            Command::Switch(args) => self.switch(args),
-        }
+        self.buffered_command = Some(command);
+        self.handle_command();
 
         false
     }
@@ -128,18 +134,29 @@ impl Zestty {
     #[tracing::instrument(skip_all)]
     fn handle_event(&mut self, event: Event) {
         match event {
+            Event::SessionUpdate(sessions, _) => {
+                self.session_list = Some(sessions);
+            },
+            Event::ListClients(clients) => self.find_client(&clients),
             _ => { }
         }
     }
 
     #[tracing::instrument(skip_all)]
     fn handle_command(&mut self) {
+        // do not handle the command before having info
+        match (&self.session_list, &self.client_id) {
+            (Some(_), Some(_)) => { },
+            _ => {
+                tracing::debug!("cannot handle command yet");
+                return;
+            }
+        }
+
         if let Some(command) = self.buffered_command.take() {
             match command {
                 Command::Switch(args) => self.switch(args),
             }
-
-            self.buffered_command = None;
         }
     }
 
@@ -169,6 +186,16 @@ impl Zestty {
         while self.buffered_events.len() > 0 {
             let event = self.buffered_events.pop().unwrap();
             self.handle_event(event);
+        }
+
+        self.handle_command();
+    }
+
+    fn find_client(&mut self, clients: &Vec<ClientInfo>) {
+        for client in clients {
+            if client.is_current_client {
+                self.client_id = Some(client.client_id);
+            }
         }
     }
 }
