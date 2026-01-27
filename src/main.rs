@@ -1,12 +1,16 @@
+mod history;
+
 use std::collections::BTreeMap;
 use std::path::PathBuf;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
 use zellij_tile::prelude::*;
 use serde::{Serialize, Deserialize};
 use serde_json;
+use history::SessionHistory;
 
 #[cfg(feature = "tracing")]
 pub fn init_tracing() {
-    use std::fs::File;
     use std::sync::Arc;
     use tracing_subscriber::layer::SubscriberExt;
 
@@ -31,8 +35,9 @@ struct Zestty {
     buffered_events: Vec<Event>,
     buffered_command: Option<Command>,
     permission_granted: Option<bool>,
-    session_list: Option<Vec<SessionInfo>>,
+    session_name: Option<String>,
     client_id: Option<u16>,
+    history: SessionHistory,
 }
 
 register_plugin!(Zestty);
@@ -76,9 +81,6 @@ impl ZellijPlugin for Zestty {
 
         request_permission(permissions);
         tracing::info!("requested permissions {:?}", permissions);
-
-        list_clients();
-        tracing::info!("requested client list");
     }
 
     #[tracing::instrument(skip_all)]
@@ -90,6 +92,7 @@ impl ZellijPlugin for Zestty {
                 self.finish_setup();
             },
             (_, Event::PermissionRequestResult(PermissionStatus::Denied)) => {
+                tracing::info!("permission denied, closing");
                 self.permission_granted = Some(false);
                 close_self();
             },
@@ -135,33 +138,42 @@ impl Zestty {
     fn handle_event(&mut self, event: Event) {
         match event {
             Event::SessionUpdate(sessions, _) => {
-                self.session_list = Some(sessions);
+                self.find_session(sessions);
+                self.client_id = None;
+                list_clients();
             },
-            Event::ListClients(clients) => self.find_client(&clients),
+            Event::ListClients(clients) => self.find_client(clients),
             _ => { }
         }
+
+        self.handle_command();
     }
 
     #[tracing::instrument(skip_all)]
     fn handle_command(&mut self) {
         // do not handle the command before having info
-        match (&self.session_list, &self.client_id) {
+        match (&self.session_name, &self.client_id) {
             (Some(_), Some(_)) => { },
             _ => {
                 tracing::debug!("cannot handle command yet");
                 return;
             }
-        }
+        };
 
         if let Some(command) = self.buffered_command.take() {
+            self.load_history();
+
             match command {
                 Command::Switch(args) => self.switch(args),
             }
+
+            self.save_history();
+            close_self();
         }
     }
 
     #[tracing::instrument(skip_all)]
-    fn switch(&self, args: SwitchArgs) {
+    fn switch(&mut self, args: SwitchArgs) {
         tracing::trace!("switch called");
 
         tracing::debug!("switching session with args {:?}", args);
@@ -173,6 +185,11 @@ impl Zestty {
             Some(layout) => LayoutInfo::File(layout),
             None => LayoutInfo::File(String::from("default"))
         };
+
+        // update history
+        let session_name = self.session_name.clone().unwrap();
+        self.history.truncate();
+        self.history.push(session_name);
 
         switch_session_with_layout(name, layout, cwd);
     }
@@ -187,11 +204,73 @@ impl Zestty {
             let event = self.buffered_events.pop().unwrap();
             self.handle_event(event);
         }
-
-        self.handle_command();
     }
 
-    fn find_client(&mut self, clients: &Vec<ClientInfo>) {
+    #[tracing::instrument(skip_all)]
+    fn load_history(&mut self) {
+        let path = self.history_path();
+        if !path.exists() {
+            tracing::debug!("history file '{:?}' does not exist", path);
+            return;
+        }
+
+        let file = match File::open(&path) {
+            Ok(file) => file,
+            Err(err) => {
+                tracing::error!("could not open history file '{:?}': {:?}", path, err);
+                return;
+            }
+        };
+
+        let reader = BufReader::new(file);
+        match serde_json::from_reader(reader) {
+            Ok(history) => {
+                tracing::info!("loaded history: {:?}", history);
+                self.history = history;
+            },
+            Err(err) => {
+                tracing::error!("could not deserialize history from file '{:?}': {:?}", path, err);
+                return;
+            }
+        }
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn save_history(&self) {
+        let path = self.history_path();
+        let file = match File::create(&path) {
+            Ok(file) => file,
+            Err(err) => {
+                tracing::error!("could not open history file '{:?}': {:?}", path, err);
+                return;
+            }
+        };
+
+        let writer = BufWriter::new(file);
+        match serde_json::to_writer_pretty(writer, &self.history) {
+            Ok(()) => { },
+            Err(err) => {
+                tracing::error!("could not serialize history to file '{:?}': {:?}", path, err);
+                return;
+            }
+        }
+    }
+
+    fn history_path(&self) -> PathBuf {
+        let client_id = self.client_id.unwrap();
+        let path = format!("/tmp/client_{}_history.json", client_id);
+        PathBuf::from(path)
+    }
+
+    fn find_session(&mut self, sessions: Vec<SessionInfo>) {
+        for session in sessions {
+            if session.is_current_session {
+                self.session_name = Some(session.name);
+            }
+        }
+    }
+
+    fn find_client(&mut self, clients: Vec<ClientInfo>) {
         for client in clients {
             if client.is_current_client {
                 self.client_id = Some(client.client_id);
