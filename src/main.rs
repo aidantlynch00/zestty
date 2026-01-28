@@ -51,9 +51,11 @@ struct SwitchArgs {
 
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "command")]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "kebab-case")]
 enum Command {
     Switch(SwitchArgs),
+    PreviousSession,
+    NextSession,
 }
 
 impl ZellijPlugin for Zestty {
@@ -165,6 +167,8 @@ impl Zestty {
 
             match command {
                 Command::Switch(args) => self.switch(args),
+                Command::PreviousSession => self.prev_session(),
+                Command::NextSession => self.next_session(),
             }
 
             self.save_history();
@@ -192,6 +196,23 @@ impl Zestty {
         self.history.push(session_name);
 
         switch_session_with_layout(name, layout, cwd);
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn prev_session(&mut self) {
+        let session_name = self.session_name.clone().unwrap();
+        match self.history.prev(session_name) {
+            session @ Some(_) => switch_session(session),
+            None => tracing::debug!("no previous session")
+        }
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn next_session(&mut self) {
+        match self.history.next() {
+            session @ Some(_) => switch_session(session),
+            None => tracing::debug!("no next session")
+        }
     }
 
     #[tracing::instrument(skip_all)]

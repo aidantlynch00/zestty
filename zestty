@@ -45,6 +45,8 @@ attach      attach to an existing zellij session
 pick        pick from lists and sessionize
 list        list things that can be sessionized
 sessionize  create or attach to a session object
+previous    switch to the previous session in the stack
+next        switch to the next session in the stack
 EOF
 }
 
@@ -684,6 +686,16 @@ zestty_sessionize() {
     esac
 }
 
+zestty_previous() {
+    [ "$ZELLIJ" = 1 ] && exit_fail "Must be in a zellij session!"
+    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "{ \"command\": \"previous-session\" }"
+}
+
+zestty_next() {
+    [ "$ZELLIJ" = 1 ] && exit_fail "Must be in a zellij session!"
+    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "{ \"command\": \"next-session\" }"
+}
+
 # do not proceed if config is invalid
 if ! zellij setup --check 1> /dev/null; then
     exit_fail
@@ -735,6 +747,8 @@ case "$_z_command" in
     "p" | "pick") zestty_pick "$@";;
     "l" | "list") zestty_list "$@";;
     "s" | "sessionize") zestty_sessionize "$@";;
+    "pr" | "prev" | "previous") zestty_previous;;
+    "n" | "next") zestty_next;;
     *) exit_fail_with_usage "Unknown command '$_z_command'" zestty_usage;;
 esac
 
