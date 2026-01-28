@@ -8,12 +8,15 @@ pub struct SessionHistory {
 
 impl SessionHistory {
     #[tracing::instrument(skip_all)]
-    pub fn prev(&mut self) -> Option<&str> {
+    pub fn prev(&mut self, session: String) -> Option<&str> {
         let length = self.stack.len();
         let new_index = match self.head {
             Some(index) if index > 0 => Some(index - 1),
             Some(_index) => None,
-            None if length > 0 => Some(length - 1),
+            None if length > 0 => {
+                self.stack.push(session);
+                Some(length - 1) // precomputed
+            },
             None => None,
         }?;
 
