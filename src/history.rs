@@ -7,7 +7,6 @@ pub struct SessionHistory {
 }
 
 impl SessionHistory {
-    #[tracing::instrument(skip_all)]
     pub fn prev(&mut self, session: String) -> Option<&str> {
         let length = self.stack.len();
         let new_index = match self.head {
@@ -24,7 +23,6 @@ impl SessionHistory {
         Some(&self.stack[new_index])
     }
 
-    #[tracing::instrument(skip_all)]
     pub fn next(&mut self) -> Option<&str> {
         let length = self.stack.len();
         let new_index = match self.head {
@@ -37,7 +35,6 @@ impl SessionHistory {
         Some(&self.stack[new_index])
     }
 
-    #[tracing::instrument(skip_all)]
     pub fn truncate(&mut self) {
         if let Some(index) = self.head {
             while self.stack.len() > index {
@@ -48,7 +45,6 @@ impl SessionHistory {
         }
     }
 
-    #[tracing::instrument(skip_all)]
     pub fn push(&mut self, session: String) {
         self.stack.push(session);
     }

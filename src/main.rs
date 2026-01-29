@@ -35,8 +35,7 @@ struct Zestty {
     buffered_events: Vec<Event>,
     buffered_command: Option<Command>,
     permission_granted: Option<bool>,
-    session_name: Option<String>,
-    client_id: Option<u16>,
+    sessions: Option<Vec<SessionInfo>>,
     history: SessionHistory,
 }
 
@@ -70,7 +69,6 @@ impl ZellijPlugin for Zestty {
         let events = &[
             EventType::PermissionRequestResult,
             EventType::SessionUpdate,
-            EventType::ListClients,
         ];
 
         subscribe(events);
@@ -139,12 +137,7 @@ impl Zestty {
     #[tracing::instrument(skip_all)]
     fn handle_event(&mut self, event: Event) {
         match event {
-            Event::SessionUpdate(sessions, _) => {
-                self.find_session(sessions);
-                self.client_id = None;
-                list_clients();
-            },
-            Event::ListClients(clients) => self.find_client(clients),
+            Event::SessionUpdate(sessions, _) => self.sessions = Some(sessions),
             _ => { }
         }
 
@@ -153,13 +146,10 @@ impl Zestty {
 
     #[tracing::instrument(skip_all)]
     fn handle_command(&mut self) {
-        // do not handle the command before having info
-        match (&self.session_name, &self.client_id) {
-            (Some(_), Some(_)) => { },
-            _ => {
-                tracing::debug!("cannot handle command yet");
-                return;
-            }
+        // do not handle the command before having session list
+        if self.sessions.is_none() {
+            tracing::debug!("cannot handle command yet");
+            return;
         };
 
         if let Some(command) = self.buffered_command.take() {
@@ -190,8 +180,10 @@ impl Zestty {
             None => LayoutInfo::File(String::from("default"))
         };
 
+        // SAFETY: we have the session list and one will be active
+        let session_name = self.find_session().unwrap();
+
         // update history
-        let session_name = self.session_name.clone().unwrap();
         self.history.truncate();
         self.history.push(session_name);
 
@@ -200,7 +192,8 @@ impl Zestty {
 
     #[tracing::instrument(skip_all)]
     fn prev_session(&mut self) {
-        let session_name = self.session_name.clone().unwrap();
+        // SAFETY: we have the session list and one will be active
+        let session_name = self.find_session().unwrap();
         match self.history.prev(session_name) {
             session @ Some(_) => switch_session(session),
             None => tracing::debug!("no previous session")
@@ -278,24 +271,16 @@ impl Zestty {
     }
 
     fn history_path(&self) -> PathBuf {
-        let client_id = self.client_id.unwrap();
-        let path = format!("/tmp/client_{}_history.json", client_id);
-        PathBuf::from(path)
+        PathBuf::from("/tmp/client_history.json")
     }
 
-    fn find_session(&mut self, sessions: Vec<SessionInfo>) {
-        for session in sessions {
+    fn find_session(&mut self) -> Option<String> {
+        for session in self.sessions.as_ref()? {
             if session.is_current_session {
-                self.session_name = Some(session.name);
+                return Some(session.name.clone())
             }
         }
-    }
 
-    fn find_client(&mut self, clients: Vec<ClientInfo>) {
-        for client in clients {
-            if client.is_current_client {
-                self.client_id = Some(client.client_id);
-            }
-        }
+        None
     }
 }
