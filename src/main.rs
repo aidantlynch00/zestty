@@ -184,7 +184,7 @@ impl Zestty {
         let session_name = self.find_session().unwrap();
 
         // update history
-        self.history.truncate();
+        // TODO: if next in stack is session, do not truncate or push
         self.history.push(session_name);
 
         switch_session_with_layout(name, layout, cwd);

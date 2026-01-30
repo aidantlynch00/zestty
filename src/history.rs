@@ -35,7 +35,7 @@ impl SessionHistory {
         Some(&self.stack[new_index])
     }
 
-    pub fn truncate(&mut self) {
+    fn truncate(&mut self) {
         if let Some(index) = self.head {
             while self.stack.len() > index {
                 self.stack.pop();
@@ -46,6 +46,15 @@ impl SessionHistory {
     }
 
     pub fn push(&mut self, session: String) {
-        self.stack.push(session);
+        let length = self.stack.len();
+        match self.head {
+            Some(index) if index < length - 1 && self.stack[index + 1] == session => {
+                self.head = Some(index + 1);
+            },
+            _ => {
+                self.truncate();
+                self.stack.push(session);
+            }
+        }
     }
 }
