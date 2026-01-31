@@ -40,6 +40,7 @@ usage: zestty <command>
 
 $(bold "Available commands")
 help        print this message
+config      print the current zestty configuration
 create      create a zellij session with a name, layout, and working directory
 attach      attach to an existing zellij session
 pick        pick from lists and sessionize
@@ -113,6 +114,14 @@ submodule   submodule:<name>:<path>
 
 $(bold "Parameters")
 session     session object to sessionize
+EOF
+}
+
+zestty_config() {
+    cat <<EOF
+$(bold "ZESTTY_DELIM")            "$ZESTTY_DELIM"
+$(bold "ZESTTY_PROJECT_DELIM")    "$ZESTTY_PROJECT_DELIM"
+$(bold "ZESTTY_PLUGIN_URL")       "$ZESTTY_PLUGIN_URL"
 EOF
 }
 
@@ -760,6 +769,7 @@ fi
 
 case "$_z_command" in
     "-?" | "-h" | "--help" | "h" | "help") zestty_usage;;
+    "config") zestty_config;;
     "c" | "create") zestty_create "$@";;
     "a" | "attach") zestty_attach "$@";;
     "p" | "pick") zestty_pick "$@";;
