@@ -52,6 +52,7 @@ struct SwitchArgs {
 #[serde(tag = "command")]
 #[serde(rename_all = "kebab-case")]
 enum Command {
+    AddSessionToHistory,
     Switch(SwitchArgs),
     PreviousSession,
     NextSession,
@@ -156,6 +157,7 @@ impl Zestty {
             self.load_history();
 
             match command {
+                Command::AddSessionToHistory => self.add_session_to_history(),
                 Command::Switch(args) => self.switch(args),
                 Command::PreviousSession => self.prev_session(),
                 Command::NextSession => self.next_session(),
@@ -164,6 +166,17 @@ impl Zestty {
             self.save_history();
             close_self();
         }
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn add_session_to_history(&mut self) {
+        tracing::trace!("add_session_to_history called");
+
+        // SAFETY: we have the session list and one must be active
+        let session_name = self.find_session().unwrap();
+
+        // update history
+        self.history.add_session(session_name);
     }
 
     #[tracing::instrument(skip_all)]
@@ -180,21 +193,17 @@ impl Zestty {
             None => LayoutInfo::File(String::from("default"))
         };
 
-        // SAFETY: we have the session list and one will be active
-        let session_name = self.find_session().unwrap();
-
         // update history
-        // TODO: if next in stack is session, do not truncate or push
-        self.history.push(session_name);
+        self.add_session_to_history();
 
         switch_session_with_layout(name, layout, cwd);
     }
 
     #[tracing::instrument(skip_all)]
     fn prev_session(&mut self) {
-        // SAFETY: we have the session list and one will be active
-        let session_name = self.find_session().unwrap();
-        match self.history.prev(session_name) {
+        tracing::trace!("prev_session called");
+
+        match self.history.prev() {
             session @ Some(_) => switch_session(session),
             None => tracing::debug!("no previous session")
         }
@@ -202,6 +211,8 @@ impl Zestty {
 
     #[tracing::instrument(skip_all)]
     fn next_session(&mut self) {
+        tracing::trace!("next_session called");
+
         match self.history.next() {
             session @ Some(_) => switch_session(session),
             None => tracing::debug!("no next session")

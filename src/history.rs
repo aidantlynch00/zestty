@@ -7,14 +7,14 @@ pub struct SessionHistory {
 }
 
 impl SessionHistory {
-    pub fn prev(&mut self, session: String) -> Option<&str> {
+    pub fn prev(&mut self) -> Option<&str> {
         let length = self.stack.len();
         let new_index = match self.head {
             Some(index) if index > 0 => Some(index - 1),
             Some(_index) => None,
             None if length > 0 => {
-                self.stack.push(session);
-                Some(length - 1) // precomputed
+                tracing::error!("head should point to a session in a non-empty stack");
+                Some(length - 1)
             },
             None => None,
         }?;
@@ -23,11 +23,16 @@ impl SessionHistory {
         Some(&self.stack[new_index])
     }
 
+    #[tracing::instrument(skip_all)]
     pub fn next(&mut self) -> Option<&str> {
         let length = self.stack.len();
         let new_index = match self.head {
             Some(index) if index < length - 1 => Some(index + 1),
             Some(_index) => None,
+            None if length > 0 => {
+                tracing::error!("head should point to a session in a non-empty stack");
+                None
+            },
             None => None,
         }?;
 
@@ -45,9 +50,11 @@ impl SessionHistory {
         }
     }
 
-    pub fn push(&mut self, session: String) {
+    pub fn add_session(&mut self, session: String) {
         let length = self.stack.len();
         match self.head {
+            // move the head if the next session in the stack is the one we
+            // wanted to add
             Some(index) if index < length - 1 && self.stack[index + 1] == session => {
                 self.head = Some(index + 1);
             },

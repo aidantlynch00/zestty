@@ -153,6 +153,18 @@ zestty_get_session_state() {
     fi
 }
 
+# create a backgrounded subshell to call out to the zestty plugin to add the
+# session to the history stack once we are inside our target session
+zestty_call_add_session_to_history() {
+    (
+        {
+            sleep 1
+            exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- \
+                "{ \"command\": \"add-session-to-history\" }"
+        } &
+    )
+}
+
 zestty_call_switch() {
     if [ "$#" -lt "1" ]; then
         exit_fail "Session name required!"
@@ -261,6 +273,9 @@ zestty_create() {
         # pushd and popd are bash builtins and are not POSIX compliant
         cd "$_c_path"
 
+        # add the new session to the history stack
+        zestty_call_add_session_to_history
+
         if [ -n "$_c_layout" ]; then
             exec zellij \
                 --session "$_c_name" \
@@ -298,6 +313,9 @@ zestty_attach() {
     if [ "$ZELLIJ" = "0" ]; then
         zestty_call_switch "$_a_name"
     else
+        # add the session to the history stack
+        zestty_call_add_session_to_history
+
         exec zellij attach "$_a_name"
     fi
 }
