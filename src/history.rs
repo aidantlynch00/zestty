@@ -12,10 +12,7 @@ impl SessionHistory {
         let new_index = match self.head {
             Some(index) if index > 0 => Some(index - 1),
             Some(_index) => None,
-            None if length > 0 => {
-                tracing::error!("head should point to a session in a non-empty stack");
-                Some(length - 1)
-            },
+            None if length > 0 => panic!("no session head in a non-empty stack"),
             None => None,
         }?;
 
@@ -23,16 +20,12 @@ impl SessionHistory {
         Some(&self.stack[new_index])
     }
 
-    #[tracing::instrument(skip_all)]
     pub fn next(&mut self) -> Option<&str> {
         let length = self.stack.len();
         let new_index = match self.head {
             Some(index) if index < length - 1 => Some(index + 1),
             Some(_index) => None,
-            None if length > 0 => {
-                tracing::error!("head should point to a session in a non-empty stack");
-                None
-            },
+            None if length > 0 => panic!("no session head in a non-empty stack"),
             None => None,
         }?;
 
