@@ -42,7 +42,7 @@ struct Zestty {
 register_plugin!(Zestty);
 
 #[derive(Debug, Serialize, Deserialize)]
-struct SwitchArgs {
+struct SwitchSessionArgs {
     name: Option<String>,
     path: Option<String>,
     layout: Option<String>,
@@ -53,7 +53,7 @@ struct SwitchArgs {
 #[serde(rename_all = "kebab-case")]
 enum Command {
     AddSessionToHistory,
-    Switch(SwitchArgs),
+    SwitchSession(SwitchSessionArgs),
     PreviousSession,
     NextSession,
 }
@@ -158,7 +158,7 @@ impl Zestty {
 
             match command {
                 Command::AddSessionToHistory => self.add_session_to_history(),
-                Command::Switch(args) => self.switch(args),
+                Command::SwitchSession(args) => self.switch_session(args),
                 Command::PreviousSession => self.prev_session(),
                 Command::NextSession => self.next_session(),
             }
@@ -180,11 +180,11 @@ impl Zestty {
     }
 
     #[tracing::instrument(skip_all)]
-    fn switch(&mut self, args: SwitchArgs) {
-        tracing::trace!("switch called");
+    fn switch_session(&mut self, args: SwitchSessionArgs) {
+        tracing::trace!("switch_session called");
 
         tracing::debug!("switching session with args {:?}", args);
-        let SwitchArgs { name, path, layout } = args;
+        let SwitchSessionArgs { name, path, layout } = args;
 
         let name = name.as_deref();
         let cwd = path.map(PathBuf::from);

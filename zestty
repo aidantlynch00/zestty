@@ -165,7 +165,7 @@ zestty_call_add_session_to_history() {
     )
 }
 
-zestty_call_switch() {
+zestty_call_switch_session() {
     if [ "$#" -lt "1" ]; then
         exit_fail "Session name required!"
     fi
@@ -174,7 +174,7 @@ zestty_call_switch() {
     _cs_path=${2:-}
     _cs_layout=${3:-}
 
-    _cs_options="{ \"command\": \"switch\", \"name\": \"$_cs_name\""
+    _cs_options="{ \"command\": \"switch-session\", \"name\": \"$_cs_name\""
     if [ -n "$_cs_path" ] && [ -d "$_cs_path" ]; then
         _cs_options="$_cs_options, \"path\": \"$_cs_path\""
     fi
@@ -265,7 +265,7 @@ zestty_create() {
     fi
 
     if [ "$ZELLIJ" = "0" ]; then
-        zestty_call_switch \
+        zestty_call_switch_session \
             "$_c_name" \
             "$_c_path" \
             "$_c_layout"
@@ -311,7 +311,7 @@ zestty_attach() {
     fi
 
     if [ "$ZELLIJ" = "0" ]; then
-        zestty_call_switch "$_a_name"
+        zestty_call_switch_session "$_a_name"
     else
         # add the session to the history stack
         zestty_call_add_session_to_history
