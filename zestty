@@ -45,8 +45,8 @@ attach      attach to an existing zellij session
 pick        pick from lists and sessionize
 list        list things that can be sessionized
 sessionize  create or attach to a session object
-previous    switch to the previous session in the stack
-next        switch to the next session in the stack
+previous    switch to the previous session in the history stack
+next        switch to the next session in the history stack
 EOF
 }
 

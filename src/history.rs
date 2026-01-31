@@ -1,3 +1,6 @@
+use std::io::{self, ErrorKind, BufReader, BufWriter};
+use std::path::Path;
+use std::fs::File;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -6,7 +9,39 @@ pub struct SessionHistory {
     head: Option<usize>,
 }
 
+pub enum LoadError {
+    FileNotFound,
+    CannotOpenFile(io::Error),
+    CannotDeserialize(serde_json::Error),
+}
+
+pub enum SaveError {
+    CannotCreateFile(io::Error),
+    CannotSerialize(serde_json::Error),
+}
+
 impl SessionHistory {
+    pub fn load_from_file(path: impl AsRef<Path>) -> Result<Self, LoadError> {
+        let file = File::open(path)
+            .map_err(|err| match err.kind() {
+                ErrorKind::NotFound => LoadError::FileNotFound,
+                _ => LoadError::CannotOpenFile(err),
+            })?;
+
+        let reader = BufReader::new(file);
+        serde_json::from_reader(reader)
+            .map_err(|err| LoadError::CannotDeserialize(err))
+    }
+
+    pub fn save_to_file(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
+        let file = File::create(&path)
+            .map_err(|err| SaveError::CannotCreateFile(err))?;
+
+        let writer = BufWriter::new(file);
+        serde_json::to_writer_pretty(writer, &self)
+            .map_err(|err| SaveError::CannotSerialize(err))
+    }
+
     pub fn prev(&mut self) -> Option<&str> {
         let length = self.stack.len();
         let new_index = match self.head {

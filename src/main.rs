@@ -2,15 +2,14 @@ mod history;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use std::fs::File;
-use std::io::{BufReader, BufWriter};
 use zellij_tile::prelude::*;
 use serde::{Serialize, Deserialize};
 use serde_json;
-use history::SessionHistory;
+use history::{SessionHistory, LoadError, SaveError};
 
 #[cfg(feature = "tracing")]
 pub fn init_tracing() {
+    use std::fs::File;
     use std::sync::Arc;
     use tracing_subscriber::layer::SubscriberExt;
 
@@ -135,6 +134,8 @@ impl ZellijPlugin for Zestty {
 }
 
 impl Zestty {
+    const HISTORY_PATH: &'static str = "/tmp/zestty_history.json";
+
     #[tracing::instrument(skip_all)]
     fn handle_event(&mut self, event: Event) {
         match event {
@@ -193,10 +194,9 @@ impl Zestty {
             None => LayoutInfo::File(String::from("default"))
         };
 
-        // update history
-        self.add_session_to_history();
-
         switch_session_with_layout(name, layout, cwd);
+
+        // TODO: add name of the session we switched to to the history
     }
 
     #[tracing::instrument(skip_all)]
@@ -233,56 +233,31 @@ impl Zestty {
 
     #[tracing::instrument(skip_all)]
     fn load_history(&mut self) {
-        let path = self.history_path();
-        if !path.exists() {
-            tracing::debug!("history file '{:?}' does not exist", path);
-            return;
-        }
-
-        let file = match File::open(&path) {
-            Ok(file) => file,
-            Err(err) => {
-                tracing::error!("could not open history file '{:?}': {:?}", path, err);
-                return;
-            }
-        };
-
-        let reader = BufReader::new(file);
-        match serde_json::from_reader(reader) {
+        let path = PathBuf::from(Zestty::HISTORY_PATH);
+        match SessionHistory::load_from_file(path) {
             Ok(history) => {
-                tracing::info!("loaded history: {:?}", history);
+                tracing::debug!("loaded history: {:?}", history);
                 self.history = history;
             },
-            Err(err) => {
-                tracing::error!("could not deserialize history from file '{:?}': {:?}", path, err);
-                return;
-            }
+            Err(LoadError::FileNotFound) =>
+                tracing::debug!("no existing history"),
+            Err(LoadError::CannotOpenFile(io_err)) =>
+                tracing::error!("could not open history file: {}", io_err),
+            Err(LoadError::CannotDeserialize(de_err)) =>
+                tracing::error!("could not deserialize history: {}", de_err),
         }
     }
 
     #[tracing::instrument(skip_all)]
     fn save_history(&self) {
-        let path = self.history_path();
-        let file = match File::create(&path) {
-            Ok(file) => file,
-            Err(err) => {
-                tracing::error!("could not open history file '{:?}': {:?}", path, err);
-                return;
-            }
-        };
-
-        let writer = BufWriter::new(file);
-        match serde_json::to_writer_pretty(writer, &self.history) {
+        let path = PathBuf::from(Zestty::HISTORY_PATH);
+        match self.history.save_to_file(path) {
             Ok(()) => { },
-            Err(err) => {
-                tracing::error!("could not serialize history to file '{:?}': {:?}", path, err);
-                return;
-            }
+            Err(SaveError::CannotCreateFile(io_err)) =>
+                tracing::error!("could not create history file: {}", io_err),
+            Err(SaveError::CannotSerialize(se_err)) =>
+                tracing::error!("could not serialize history: {}", se_err),
         }
-    }
-
-    fn history_path(&self) -> PathBuf {
-        PathBuf::from("/tmp/client_history.json")
     }
 
     fn find_session(&mut self) -> Option<String> {
