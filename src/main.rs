@@ -139,7 +139,10 @@ impl Zestty {
     #[tracing::instrument(skip_all)]
     fn handle_event(&mut self, event: Event) {
         match event {
-            Event::SessionUpdate(sessions, _) => self.sessions = Some(sessions),
+            Event::SessionUpdate(sessions, _) => {
+                tracing::debug!("handling session update event");
+                self.sessions = Some(sessions);
+            },
             _ => { }
         }
 
@@ -194,9 +197,10 @@ impl Zestty {
             None => LayoutInfo::File(String::from("default"))
         };
 
-        switch_session_with_layout(name, layout, cwd);
+        // TODO: if session already exists, we will not load plugin to add to stack,
+        // so add here
 
-        // TODO: add name of the session we switched to to the history
+        switch_session_with_layout(name, layout, cwd);
     }
 
     #[tracing::instrument(skip_all)]
@@ -224,6 +228,12 @@ impl Zestty {
         tracing::debug!("hiding plugin pane and making it unselectable");
         hide_self();
         set_selectable(false);
+
+        // plugin load was due to session startup, not from a piped command so
+        // add current session to the history stack
+        if self.buffered_command.is_none() {
+            self.buffered_command = Some(Command::AddSessionToHistory);
+        }
 
         while self.buffered_events.len() > 0 {
             let event = self.buffered_events.pop().unwrap();

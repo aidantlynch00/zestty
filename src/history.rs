@@ -68,16 +68,8 @@ impl SessionHistory {
         Some(&self.stack[new_index])
     }
 
-    fn truncate(&mut self) {
-        if let Some(index) = self.head {
-            while self.stack.len() > index {
-                self.stack.pop();
-            }
-
-            self.head = None;
-        }
-    }
-
+    // TODO: if session is present in stack already, should we remove dupes?
+    // does this change if dupes are ahead or behind head?
     pub fn add_session(&mut self, session: String) {
         let length = self.stack.len();
         match self.head {
@@ -86,9 +78,15 @@ impl SessionHistory {
             Some(index) if index < length - 1 && self.stack[index + 1] == session => {
                 self.head = Some(index + 1);
             },
-            _ => {
-                self.truncate();
+            Some(index) => {
+                self.stack.truncate(index + 1);
                 self.stack.push(session);
+                self.head = Some(index + 1);
+            },
+            None if length > 0 => panic!("no session head in a non-empty stack"),
+            None => {
+                self.stack.push(session);
+                self.head = Some(0);
             }
         }
     }
