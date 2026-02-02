@@ -1,6 +1,8 @@
 use std::io::{self, ErrorKind, BufReader, BufWriter};
 use std::path::Path;
 use std::fs::File;
+use std::collections::HashSet;
+use zellij_tile::prelude::SessionInfo;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -40,6 +42,30 @@ impl SessionHistory {
         let writer = BufWriter::new(file);
         serde_json::to_writer_pretty(writer, &self)
             .map_err(|err| SaveError::CannotSerialize(err))
+    }
+
+    pub fn remove_dead_sessions(&mut self, sessions: &Vec<SessionInfo>) {
+        let mut session_set = HashSet::<&str>::new();
+        for session in sessions {
+            session_set.insert(&session.name);
+        }
+
+        let mut removed_before_head: usize = 0;
+        let old_stack = std::mem::take(&mut self.stack);
+
+        for (index, session) in old_stack.into_iter().enumerate() {
+            if session_set.contains(session.as_str()) {
+                self.stack.push(session);
+            }
+            else if let Some(head) = self.head && index < head {
+                removed_before_head += 1;
+            }
+        }
+
+        if let Some(head) = self.head.take() {
+            // SAFETY: subtraction will never underflow
+            self.head = Some(head - removed_before_head);
+        }
     }
 
     pub fn prev(&mut self) -> Option<&str> {

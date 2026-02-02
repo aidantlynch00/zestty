@@ -160,6 +160,10 @@ impl Zestty {
         if let Some(command) = self.buffered_command.take() {
             self.load_history();
 
+            // SAFETY: check for none value happens above
+            let sessions = self.sessions.as_ref().unwrap();
+            self.history.remove_dead_sessions(sessions);
+
             match command {
                 Command::AddSessionToHistory => self.add_session_to_history(),
                 Command::SwitchSession(args) => self.switch_session(args),
