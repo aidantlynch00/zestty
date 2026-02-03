@@ -457,17 +457,17 @@ zestty_list_worktrees() {
 
     git worktree list --porcelain | \
     awk -F" " '/^worktree/ {
-        path = $2;
+        worktree = $0;
         getline; hash = $2;
         getline;
         if ($1 == "branch") {
             sub(/refs\/heads\//, "", $2);
-            printf "%s:%s\n", $2, path;
+            printf "%s:%s\n", $2, worktree;
         } else if ($1 == "detached") {
-            printf "%.6s:%s\n", hash, path;
+            printf "%.6s:%s\n", hash, worktree;
         }
     }' | \
-    sed -e "s/:/$ZESTTY_DELIM/g" -e "s/^/worktree$ZESTTY_DELIM/"
+    sed -e "s/\([^:]*\):worktree \(.*\)$/worktree$ZESTTY_DELIM\1$ZESTTY_DELIM\2/"
 }
 
 zestty_list_submodules() {
