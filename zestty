@@ -162,6 +162,19 @@ zestty_get_session_state() {
     fi
 }
 
+# create a backgrounded subshell to call out to the zestty plugin to add the
+# session to the history stack once we are inside our target session
+zestty_call_add_session_to_history() {
+    (
+        {
+            sleep 1
+            # TODO: specify session to send the piped command to
+            exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- \
+                "{ \"command\": \"add-session-to-history\" }"
+        } > /dev/null 2>&1 &
+    )
+}
+
 zestty_call_switch_session() {
     if [ "$#" -lt "1" ]; then
         exit_fail "Session name required!"
@@ -307,6 +320,10 @@ zestty_attach() {
     if [ "$ZELLIJ" = "0" ]; then
         zestty_call_switch_session "$_a_name"
     else
+        # session is already created and we are attaching from the outside,
+        # so reach out to the plugin to add this session to the history stack
+        zestty_call_add_session_to_history
+
         exec zellij attach "$_a_name"
     fi
 }

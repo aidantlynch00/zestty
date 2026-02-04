@@ -194,16 +194,19 @@ impl Zestty {
         tracing::debug!("switching session with args {:?}", args);
         let SwitchSessionArgs { name, path, layout } = args;
 
-        let name = name.as_deref();
         let cwd = path.map(PathBuf::from);
         let layout = match layout {
             Some(layout) => LayoutInfo::File(layout),
             None => LayoutInfo::File(String::from("default"))
         };
 
-        // TODO: if session already exists, we will not load plugin to add to stack,
+        // if session already exists, we will not load plugin to add to stack,
         // so add here
+        if let Some(name) = name.as_ref() && self.session_exists(&name) {
+            self.history.add_session(name.clone());
+        }
 
+        let name = name.as_deref();
         switch_session_with_layout(name, layout, cwd);
     }
 
@@ -274,7 +277,7 @@ impl Zestty {
         }
     }
 
-    fn find_session(&mut self) -> Option<String> {
+    fn find_session(&self) -> Option<String> {
         for session in self.sessions.as_ref()? {
             if session.is_current_session {
                 return Some(session.name.clone())
@@ -282,5 +285,15 @@ impl Zestty {
         }
 
         None
+    }
+
+    fn session_exists(&self, name: &String) -> bool {
+        for session in self.sessions.as_ref().unwrap() {
+            if session.name == *name {
+                return true;
+            }
+        }
+
+        false
     }
 }
