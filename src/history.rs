@@ -102,6 +102,10 @@ impl SessionHistory {
     pub fn add_session(&mut self, session: String) {
         let length = self.stack.len();
         match self.head {
+            // do nothing if the added session is already at head
+            Some(index) if index < length && self.stack[index] == session => {
+                tracing::debug!("session already at head");
+            },
             // move the head if the next session in the stack is the one we
             // wanted to add
             Some(index) if index < length - 1 && self.stack[index + 1] == session => {
