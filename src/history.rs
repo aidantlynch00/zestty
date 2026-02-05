@@ -13,13 +13,13 @@ pub struct SessionHistory {
 
 pub enum LoadError {
     FileNotFound,
-    CannotOpenFile(io::Error),
-    CannotDeserialize(serde_json::Error),
+    CouldNotOpenFile(io::Error),
+    CouldNotDeserialize(serde_json::Error),
 }
 
 pub enum SaveError {
-    CannotCreateFile(io::Error),
-    CannotSerialize(serde_json::Error),
+    CouldNotCreateFile(io::Error),
+    CouldNotSerialize(serde_json::Error),
 }
 
 static NO_HEAD: &'static str = "no session head in a non-empty stack";
@@ -29,21 +29,21 @@ impl SessionHistory {
         let file = File::open(path)
             .map_err(|err| match err.kind() {
                 ErrorKind::NotFound => LoadError::FileNotFound,
-                _ => LoadError::CannotOpenFile(err),
+                _ => LoadError::CouldNotOpenFile(err),
             })?;
 
         let reader = BufReader::new(file);
         serde_json::from_reader(reader)
-            .map_err(|err| LoadError::CannotDeserialize(err))
+            .map_err(|err| LoadError::CouldNotDeserialize(err))
     }
 
     pub fn save_to_file(&self, path: impl AsRef<Path>) -> Result<(), SaveError> {
         let file = File::create(&path)
-            .map_err(|err| SaveError::CannotCreateFile(err))?;
+            .map_err(|err| SaveError::CouldNotCreateFile(err))?;
 
         let writer = BufWriter::new(file);
         serde_json::to_writer_pretty(writer, &self)
-            .map_err(|err| SaveError::CannotSerialize(err))
+            .map_err(|err| SaveError::CouldNotSerialize(err))
     }
 
     #[tracing::instrument(skip(sessions))]

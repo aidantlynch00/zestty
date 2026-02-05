@@ -256,9 +256,9 @@ impl Zestty {
             },
             Err(LoadError::FileNotFound) =>
                 tracing::info!("no existing history"),
-            Err(LoadError::CannotOpenFile(io_err)) =>
+            Err(LoadError::CouldNotOpenFile(io_err)) =>
                 tracing::error!("could not open history file: {}", io_err),
-            Err(LoadError::CannotDeserialize(de_err)) =>
+            Err(LoadError::CouldNotDeserialize(de_err)) =>
                 tracing::error!("could not deserialize history: {}", de_err),
         }
     }
@@ -269,9 +269,9 @@ impl Zestty {
         match self.history.save_to_file(&path) {
             Ok(()) =>
                 tracing::debug!("saved history to '{}'", path.display()),
-            Err(SaveError::CannotCreateFile(io_err)) =>
+            Err(SaveError::CouldNotCreateFile(io_err)) =>
                 tracing::error!("could not create history file: {}", io_err),
-            Err(SaveError::CannotSerialize(se_err)) =>
+            Err(SaveError::CouldNotSerialize(se_err)) =>
                 tracing::error!("could not serialize history: {}", se_err),
         }
     }
