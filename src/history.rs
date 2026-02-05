@@ -22,6 +22,8 @@ pub enum SaveError {
     CannotSerialize(serde_json::Error),
 }
 
+static NO_HEAD: &'static str = "no session head in a non-empty stack";
+
 impl SessionHistory {
     pub fn load_from_file(path: impl AsRef<Path>) -> Result<Self, LoadError> {
         let file = File::open(path)
@@ -46,12 +48,18 @@ impl SessionHistory {
 
     #[tracing::instrument(skip(sessions))]
     pub fn remove_dead_sessions(&mut self, sessions: &Vec<SessionInfo>) {
+        if self.stack.len() == 0 {
+            return;
+        }
+
         let mut session_set = HashSet::<&str>::new();
         for session in sessions {
             session_set.insert(&session.name);
         }
 
         tracing::debug!("active sessions: {:?}", session_set);
+
+        let head_index = self.head.expect(NO_HEAD);
         let mut removed_before_head: usize = 0;
         let old_stack = std::mem::take(&mut self.stack);
 
@@ -59,14 +67,17 @@ impl SessionHistory {
             if session_set.contains(session.as_str()) {
                 self.stack.push(session);
             }
-            else if let Some(head) = self.head && index < head {
+            else if index < head_index {
                 removed_before_head += 1;
             }
         }
 
-        if let Some(head) = self.head.take() {
+        if self.stack.len() == 0 {
+            self.head = None;
+        }
+        else {
             // SAFETY: subtraction will never underflow
-            self.head = Some(head - removed_before_head);
+            self.head = Some(head_index - removed_before_head);
         }
     }
 
@@ -75,7 +86,7 @@ impl SessionHistory {
         let new_index = match self.head {
             Some(index) if index > 0 => Some(index - 1),
             Some(_index) => None,
-            None if length > 0 => panic!("no session head in a non-empty stack"),
+            None if length > 0 => panic!("{}", NO_HEAD),
             None => None,
         }?;
 
@@ -88,7 +99,7 @@ impl SessionHistory {
         let new_index = match self.head {
             Some(index) if index < length - 1 => Some(index + 1),
             Some(_index) => None,
-            None if length > 0 => panic!("no session head in a non-empty stack"),
+            None if length > 0 => panic!("{}", NO_HEAD),
             None => None,
         }?;
 
@@ -118,7 +129,7 @@ impl SessionHistory {
                 self.stack.push(session);
                 self.head = Some(index + 1);
             },
-            None if length > 0 => panic!("no session head in a non-empty stack"),
+            None if length > 0 => panic!("{}", NO_HEAD),
             None => {
                 tracing::debug!("starting history stack");
                 self.stack.push(session);
