@@ -13,7 +13,7 @@ pub fn init_tracing() {
     use std::sync::Arc;
     use tracing_subscriber::layer::SubscriberExt;
 
-    let file = File::create("/host/zestty.log");
+    let file = File::create("/tmp/zestty.log");
     let file = match file {
         Ok(file) => file,
         Err(error) => panic!("error creating log file: {:?}", error)
@@ -178,8 +178,6 @@ impl Zestty {
 
     #[tracing::instrument(skip_all)]
     fn add_session_to_history(&mut self) {
-        tracing::trace!("add_session_to_history called");
-
         // SAFETY: we have the session list and one must be active
         let session_name = self.find_session().unwrap();
 
@@ -189,8 +187,6 @@ impl Zestty {
 
     #[tracing::instrument(skip_all)]
     fn switch_session(&mut self, args: SwitchSessionArgs) {
-        tracing::trace!("switch_session called");
-
         tracing::debug!("switching session with args {:?}", args);
         let SwitchSessionArgs { name, path, layout } = args;
 
@@ -212,20 +208,22 @@ impl Zestty {
 
     #[tracing::instrument(skip_all)]
     fn prev_session(&mut self) {
-        tracing::trace!("prev_session called");
-
         match self.history.prev() {
-            session @ Some(_) => switch_session(session),
+            session @ Some(name) => {
+                tracing::debug!("switching to session '{}'", name);
+                switch_session(session);
+            },
             None => tracing::debug!("no previous session")
         }
     }
 
     #[tracing::instrument(skip_all)]
     fn next_session(&mut self) {
-        tracing::trace!("next_session called");
-
         match self.history.next() {
-            session @ Some(_) => switch_session(session),
+            session @ Some(name) => {
+                tracing::debug!("switching to session '{}'", name);
+                switch_session(session);
+            },
             None => tracing::debug!("no next session")
         }
     }
@@ -253,11 +251,11 @@ impl Zestty {
         let path = PathBuf::from(Zestty::HISTORY_PATH);
         match SessionHistory::load_from_file(path) {
             Ok(history) => {
-                tracing::debug!("loaded history: {:?}", history);
+                tracing::info!("loaded history: {:?}", history);
                 self.history = history;
             },
             Err(LoadError::FileNotFound) =>
-                tracing::debug!("no existing history"),
+                tracing::info!("no existing history"),
             Err(LoadError::CannotOpenFile(io_err)) =>
                 tracing::error!("could not open history file: {}", io_err),
             Err(LoadError::CannotDeserialize(de_err)) =>
@@ -268,8 +266,9 @@ impl Zestty {
     #[tracing::instrument(skip_all)]
     fn save_history(&self) {
         let path = PathBuf::from(Zestty::HISTORY_PATH);
-        match self.history.save_to_file(path) {
-            Ok(()) => { },
+        match self.history.save_to_file(&path) {
+            Ok(()) =>
+                tracing::debug!("saved history to '{}'", path.display()),
             Err(SaveError::CannotCreateFile(io_err)) =>
                 tracing::error!("could not create history file: {}", io_err),
             Err(SaveError::CannotSerialize(se_err)) =>

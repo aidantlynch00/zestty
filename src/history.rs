@@ -44,12 +44,14 @@ impl SessionHistory {
             .map_err(|err| SaveError::CannotSerialize(err))
     }
 
+    #[tracing::instrument(skip(sessions))]
     pub fn remove_dead_sessions(&mut self, sessions: &Vec<SessionInfo>) {
         let mut session_set = HashSet::<&str>::new();
         for session in sessions {
             session_set.insert(&session.name);
         }
 
+        tracing::debug!("active sessions: {:?}", session_set);
         let mut removed_before_head: usize = 0;
         let old_stack = std::mem::take(&mut self.stack);
 
@@ -96,21 +98,25 @@ impl SessionHistory {
 
     // TODO: if session is present in stack already, should we remove dupes?
     // does this change if dupes are ahead or behind head?
+    #[tracing::instrument]
     pub fn add_session(&mut self, session: String) {
         let length = self.stack.len();
         match self.head {
             // move the head if the next session in the stack is the one we
             // wanted to add
             Some(index) if index < length - 1 && self.stack[index + 1] == session => {
+                tracing::debug!("session next in history stack");
                 self.head = Some(index + 1);
             },
             Some(index) => {
+                tracing::debug!("truncating history stack");
                 self.stack.truncate(index + 1);
                 self.stack.push(session);
                 self.head = Some(index + 1);
             },
             None if length > 0 => panic!("no session head in a non-empty stack"),
             None => {
+                tracing::debug!("starting history stack");
                 self.stack.push(session);
                 self.head = Some(0);
             }
