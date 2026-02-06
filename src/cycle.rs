@@ -66,8 +66,42 @@ impl SessionCycle {
         self.curr = session;
     }
 
+    fn front_to_back(&mut self) {
+        match self.sessions.pop_front() {
+            Some(front) => self.sessions.push_back(front),
+            None => { }
+        }
+    }
+
+    fn cycle_to_session(&mut self, session: &String) {
+        if self.sessions.len() == 0 {
+            return;
+        }
+
+        // SAFETY: sessions contains at least one element
+        let mut front = self.sessions.front().unwrap();
+        let start = front.clone();
+        loop {
+            if *front == *session {
+                return;
+            }
+
+            self.front_to_back();
+
+            // SAFETY: sessions contains at least one element
+            front = self.sessions.front().unwrap();
+            if *front == *start {
+                return;
+            }
+        }
+    }
+
     pub fn back(&mut self) -> Option<&str> {
-        std::mem::swap(&mut self.prev, &mut self.curr);
+        let prev = self.prev.take()?;
+        self.prev = self.curr.take();
+
+        self.cycle_to_session(&prev);
+        self.curr = Some(prev);
         self.curr.as_ref().map(String::as_str)
     }
 
@@ -76,10 +110,7 @@ impl SessionCycle {
             return None;
         }
 
-        // SAFETY: we have at least 2 sessions
-        let front = self.sessions.pop_front().unwrap();
-        self.sessions.push_back(front);
-
+        self.front_to_back();
         self.update_curr();
         self.sessions.front().map(String::as_str)
     }
@@ -102,7 +133,13 @@ impl SessionCycle {
         where S: AsRef<str> + Debug
     {
         let session = session.as_ref().to_string();
-        self.sessions.push_front(session);
+        self.cycle_to_session(&session);
+
+        match self.sessions.front() {
+            Some(front) if *front == session => { },
+            _ => self.sessions.push_front(session)
+        }
+
         self.update_curr();
     }
 }
