@@ -1,14 +1,16 @@
+use std::collections::{VecDeque, HashSet};
 use std::io::{self, ErrorKind, BufReader, BufWriter};
 use std::path::Path;
 use std::fs::File;
-use std::collections::HashSet;
+use std::fmt::Debug;
 use zellij_tile::prelude::SessionInfo;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
-pub struct SessionHistory {
-    stack: Vec<String>,
-    head: Option<usize>,
+pub struct SessionCycle {
+    sessions: VecDeque<String>,
+    prev: Option<String>,
+    curr: Option<String>,
 }
 
 pub enum LoadError {
@@ -22,9 +24,7 @@ pub enum SaveError {
     CouldNotSerialize(serde_json::Error),
 }
 
-static NO_HEAD: &'static str = "no session head in a non-empty stack";
-
-impl SessionHistory {
+impl SessionCycle {
     pub fn load_from_file(path: impl AsRef<Path>) -> Result<Self, LoadError> {
         let file = File::open(path)
             .map_err(|err| match err.kind() {
@@ -48,93 +48,61 @@ impl SessionHistory {
 
     #[tracing::instrument(skip(sessions))]
     pub fn remove_dead_sessions(&mut self, sessions: &Vec<SessionInfo>) {
-        if self.stack.len() == 0 {
-            return;
-        }
-
-        let mut session_set = HashSet::<&str>::new();
-        for session in sessions {
-            session_set.insert(&session.name);
-        }
+        let session_set = sessions.iter()
+            .map(|sessions| sessions.name.as_str())
+            .collect::<HashSet<&str>>();
 
         tracing::debug!("active sessions: {:?}", session_set);
+        let is_active = |session: &String| session_set.contains(session.as_str());
 
-        let head_index = self.head.expect(NO_HEAD);
-        let mut removed_before_head: usize = 0;
-        let old_stack = std::mem::take(&mut self.stack);
+        self.sessions.retain(is_active);
+        self.prev.take_if(|s| !is_active(s));
+        self.curr.take_if(|s| !is_active(s));
+    }
 
-        for (index, session) in old_stack.into_iter().enumerate() {
-            if session_set.contains(session.as_str()) {
-                self.stack.push(session);
-            }
-            else if index < head_index {
-                removed_before_head += 1;
-            }
-        }
+    fn update_curr(&mut self) {
+        let session = self.sessions.front().map(String::clone);
+        self.prev = self.curr.take();
+        self.curr = session;
+    }
 
-        if self.stack.len() == 0 {
-            self.head = None;
-        }
-        else {
-            // SAFETY: subtraction will never underflow
-            self.head = Some(head_index - removed_before_head);
-        }
+    pub fn back(&mut self) -> Option<&str> {
+        std::mem::swap(&mut self.prev, &mut self.curr);
+        self.curr.as_ref().map(String::as_str)
     }
 
     pub fn prev(&mut self) -> Option<&str> {
-        let length = self.stack.len();
-        let new_index = match self.head {
-            Some(index) if index > 0 => Some(index - 1),
-            Some(_index) => None,
-            None if length > 0 => panic!("{}", NO_HEAD),
-            None => None,
-        }?;
+        if self.sessions.len() <= 1 {
+            return None;
+        }
 
-        self.head = Some(new_index);
-        Some(&self.stack[new_index])
+        // SAFETY: we have at least 2 sessions
+        let front = self.sessions.pop_front().unwrap();
+        self.sessions.push_back(front);
+
+        self.update_curr();
+        self.sessions.front().map(String::as_str)
     }
 
     pub fn next(&mut self) -> Option<&str> {
-        let length = self.stack.len();
-        let new_index = match self.head {
-            Some(index) if index < length - 1 => Some(index + 1),
-            Some(_index) => None,
-            None if length > 0 => panic!("{}", NO_HEAD),
-            None => None,
-        }?;
+        if self.sessions.len() <= 1 {
+            return None;
+        }
 
-        self.head = Some(new_index);
-        Some(&self.stack[new_index])
+        // SAFETY: we have at least 2 sessions
+        let back = self.sessions.pop_back().unwrap();
+        self.sessions.push_front(back);
+
+        self.update_curr();
+        self.sessions.front().map(String::as_str)
     }
 
-    // TODO: if session is present in stack already, should we remove dupes?
-    // does this change if dupes are ahead or behind head?
     #[tracing::instrument]
-    pub fn add_session(&mut self, session: String) {
-        let length = self.stack.len();
-        match self.head {
-            // do nothing if the added session is already at head
-            Some(index) if index < length && self.stack[index] == session => {
-                tracing::debug!("session already at head");
-            },
-            // move the head if the next session in the stack is the one we
-            // wanted to add
-            Some(index) if index < length - 1 && self.stack[index + 1] == session => {
-                tracing::debug!("session next in history stack");
-                self.head = Some(index + 1);
-            },
-            Some(index) => {
-                tracing::debug!("truncating history stack");
-                self.stack.truncate(index + 1);
-                self.stack.push(session);
-                self.head = Some(index + 1);
-            },
-            None if length > 0 => panic!("{}", NO_HEAD),
-            None => {
-                tracing::debug!("starting history stack");
-                self.stack.push(session);
-                self.head = Some(0);
-            }
-        }
+    pub fn push<S>(&mut self, session: S)
+        where S: AsRef<str> + Debug
+    {
+        let session = session.as_ref().to_string();
+        self.sessions.push_front(session);
+        self.update_curr();
     }
 }
