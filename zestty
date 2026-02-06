@@ -164,7 +164,7 @@ zestty_get_session_state() {
 
 # create a backgrounded subshell to call out to the zestty plugin to add the
 # session to the history stack once we are inside our target session
-zestty_call_add_session_to_history() {
+zestty_call_add_session_to_cycle() {
     _ca_name=${1:-}
     [ -z "$_ca_name" ] && return
 
@@ -173,7 +173,7 @@ zestty_call_add_session_to_history() {
             sleep 1
             exec zellij --session "$_ca_name" \
                 pipe --plugin "$ZESTTY_PLUGIN_URL" -- \
-                "{ \"command\": \"add-session-to-history\" }"
+                "{ \"command\": \"add-session-to-cycle\" }"
         } > /dev/null 2>&1 &
     )
 }
@@ -325,7 +325,7 @@ zestty_attach() {
     else
         # session is already created and we are attaching from the outside,
         # so reach out to the plugin to add this session to the history stack
-        zestty_call_add_session_to_history "$_a_name"
+        zestty_call_add_session_to_cycle "$_a_name"
 
         exec zellij attach "$_a_name"
     fi
@@ -717,12 +717,12 @@ zestty_sessionize() {
 
 zestty_previous() {
     [ "$ZELLIJ" = 1 ] && exit_fail "Must be in a zellij session!"
-    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "{ \"command\": \"previous-session\" }"
+    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "{ \"command\": \"cycle-previous\" }"
 }
 
 zestty_next() {
     [ "$ZELLIJ" = 1 ] && exit_fail "Must be in a zellij session!"
-    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "{ \"command\": \"next-session\" }"
+    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "{ \"command\": \"cycle-next\" }"
 }
 
 # do not proceed if config is invalid

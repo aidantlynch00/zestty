@@ -1,11 +1,11 @@
-mod history;
+mod cycle;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use zellij_tile::prelude::*;
 use serde::{Serialize, Deserialize};
 use serde_json;
-use history::{SessionCycle, LoadError, SaveError};
+use cycle::{SessionCycle, LoadError, SaveError};
 
 #[cfg(feature = "tracing")]
 pub fn init_tracing() {
@@ -51,10 +51,10 @@ struct SwitchSessionArgs {
 #[serde(tag = "command")]
 #[serde(rename_all = "kebab-case")]
 enum Command {
-    AddSessionToHistory,
+    AddSessionToCycle,
     SwitchSession(SwitchSessionArgs),
-    PreviousSession,
-    NextSession,
+    CyclePrevious,
+    CycleNext,
 }
 
 impl ZellijPlugin for Zestty {
@@ -134,7 +134,7 @@ impl ZellijPlugin for Zestty {
 }
 
 impl Zestty {
-    const HISTORY_PATH: &'static str = "/tmp/zestty_history.json";
+    const SESSIONS_FILE: &'static str = "/tmp/zestty_sessions.json";
 
     #[tracing::instrument(skip_all)]
     fn handle_event(&mut self, event: Event) {
@@ -158,30 +158,30 @@ impl Zestty {
         };
 
         if let Some(command) = self.buffered_command.take() {
-            self.load_history();
+            self.load_sessions();
 
             // SAFETY: check for none value happens above
             let sessions = self.sessions.as_ref().unwrap();
             self.cycle.remove_dead_sessions(sessions);
 
             match command {
-                Command::AddSessionToHistory => self.add_session_to_history(),
+                Command::AddSessionToCycle => self.add_session_to_cycle(),
                 Command::SwitchSession(args) => self.switch_session(args),
-                Command::PreviousSession => self.prev_session(),
-                Command::NextSession => self.next_session(),
+                Command::CyclePrevious => self.cycle_previous(),
+                Command::CycleNext => self.cycle_next(),
             }
 
-            self.save_history();
+            self.save_sessions();
             close_self();
         }
     }
 
     #[tracing::instrument(skip_all)]
-    fn add_session_to_history(&mut self) {
+    fn add_session_to_cycle(&mut self) {
         // SAFETY: we have the session list and one must be active
         let session_name = self.find_session().unwrap();
 
-        // update history
+        // update cycle
         self.cycle.push(session_name);
     }
 
@@ -207,7 +207,7 @@ impl Zestty {
     }
 
     #[tracing::instrument(skip_all)]
-    fn prev_session(&mut self) {
+    fn cycle_previous(&mut self) {
         match self.cycle.prev() {
             session @ Some(name) => {
                 tracing::debug!("switching to session '{}'", name);
@@ -218,7 +218,7 @@ impl Zestty {
     }
 
     #[tracing::instrument(skip_all)]
-    fn next_session(&mut self) {
+    fn cycle_next(&mut self) {
         match self.cycle.next() {
             session @ Some(name) => {
                 tracing::debug!("switching to session '{}'", name);
@@ -235,9 +235,9 @@ impl Zestty {
         set_selectable(false);
 
         // plugin load was due to session startup, not from a piped command so
-        // add current session to the history stack
+        // add current session to the cycle
         if self.buffered_command.is_none() {
-            self.buffered_command = Some(Command::AddSessionToHistory);
+            self.buffered_command = Some(Command::AddSessionToCycle);
         }
 
         while self.buffered_events.len() > 0 {
@@ -247,32 +247,32 @@ impl Zestty {
     }
 
     #[tracing::instrument(skip_all)]
-    fn load_history(&mut self) {
-        let path = PathBuf::from(Zestty::HISTORY_PATH);
+    fn load_sessions(&mut self) {
+        let path = PathBuf::from(Zestty::SESSIONS_FILE);
         match SessionCycle::load_from_file(path) {
-            Ok(history) => {
-                tracing::info!("loaded history: {:?}", history);
-                self.cycle = history;
+            Ok(cycle) => {
+                tracing::info!("loaded sessions: {:?}", cycle);
+                self.cycle = cycle;
             },
             Err(LoadError::FileNotFound) =>
-                tracing::info!("no existing history"),
+                tracing::info!("no existing sessions"),
             Err(LoadError::CouldNotOpenFile(io_err)) =>
-                tracing::error!("could not open history file: {}", io_err),
+                tracing::error!("could not open sessions file: {}", io_err),
             Err(LoadError::CouldNotDeserialize(de_err)) =>
-                tracing::error!("could not deserialize history: {}", de_err),
+                tracing::error!("could not deserialize sessions: {}", de_err),
         }
     }
 
     #[tracing::instrument(skip_all)]
-    fn save_history(&self) {
-        let path = PathBuf::from(Zestty::HISTORY_PATH);
+    fn save_sessions(&self) {
+        let path = PathBuf::from(Zestty::SESSIONS_FILE);
         match self.cycle.save_to_file(&path) {
             Ok(()) =>
-                tracing::debug!("saved history to '{}'", path.display()),
+                tracing::debug!("saved sessions to '{}'", path.display()),
             Err(SaveError::CouldNotCreateFile(io_err)) =>
-                tracing::error!("could not create history file: {}", io_err),
+                tracing::error!("could not create sessions file: {}", io_err),
             Err(SaveError::CouldNotSerialize(se_err)) =>
-                tracing::error!("could not serialize history: {}", se_err),
+                tracing::error!("could not serialize sessions: {}", se_err),
         }
     }
 
