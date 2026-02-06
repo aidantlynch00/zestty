@@ -55,6 +55,7 @@ enum Command {
     SwitchSession(SwitchSessionArgs),
     CyclePrevious,
     CycleNext,
+    CycleBack,
 }
 
 impl ZellijPlugin for Zestty {
@@ -169,6 +170,7 @@ impl Zestty {
                 Command::SwitchSession(args) => self.switch_session(args),
                 Command::CyclePrevious => self.cycle_previous(),
                 Command::CycleNext => self.cycle_next(),
+                Command::CycleBack => self.cycle_back(),
             }
 
             self.save_sessions();
@@ -225,6 +227,17 @@ impl Zestty {
                 switch_session(session);
             },
             None => tracing::debug!("no next session")
+        }
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn cycle_back(&mut self) {
+        match self.cycle.back() {
+            session @ Some(name) => {
+                tracing::debug!("switching to session '{}'", name);
+                switch_session(session);
+            },
+            None => tracing::debug!("no session to go back to")
         }
     }
 
