@@ -128,7 +128,7 @@ impl SessionCycle {
         self.sessions.front().map(String::as_str)
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(skip(self))]
     pub fn push<S>(&mut self, session: S)
         where S: AsRef<str> + Debug
     {
@@ -136,8 +136,13 @@ impl SessionCycle {
         self.cycle_to_session(&session);
 
         match self.sessions.front() {
-            Some(front) if *front == session => { },
-            _ => self.sessions.push_front(session)
+            Some(front) if *front == session => {
+                tracing::debug!("cycled to session '{}'", session);
+            },
+            _ => {
+                tracing::debug!("pushing session '{}'", session);
+                self.sessions.push_front(session);
+            }
         }
 
         self.update_curr();
