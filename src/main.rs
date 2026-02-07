@@ -239,14 +239,16 @@ impl Zestty {
 
     #[tracing::instrument(skip_all)]
     fn finish_setup(&mut self) {
-        tracing::debug!("hiding plugin pane and making it unselectable");
-        hide_self();
-        set_selectable(false);
-
-        // plugin load was due to session startup, not from a piped command so
-        // add current session to the cycle
-        if self.buffered_command.is_none() {
-            self.buffered_command = Some(Command::AddSessionToCycle);
+        match self.buffered_command {
+            Some(_) => {
+                tracing::debug!("hiding plugin pane and making it unselectable");
+                hide_self();
+                set_selectable(false);
+            },
+            None => {
+                tracing::debug!("no command, closing plugin pane");
+                close_self();
+            }
         }
 
         while self.buffered_events.len() > 0 {
