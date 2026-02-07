@@ -42,7 +42,7 @@ register_plugin!(Zestty);
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SwitchSessionArgs {
-    name: Option<String>,
+    name: String,
     path: Option<String>,
     layout: Option<String>,
 }
@@ -198,14 +198,10 @@ impl Zestty {
             None => LayoutInfo::File(String::from("default"))
         };
 
-        // if session already exists, we will not load plugin to add to stack,
-        // so add here
-        if let Some(name) = name.as_ref() && self.session_exists(&name) {
-            self.cycle.push(name.clone());
-        }
+        // add the session to the cycle
+        self.cycle.push(name.clone());
 
-        let name = name.as_deref();
-        switch_session_with_layout(name, layout, cwd);
+        switch_session_with_layout(Some(&name), layout, cwd);
     }
 
     #[tracing::instrument(skip_all)]
@@ -297,15 +293,5 @@ impl Zestty {
         }
 
         None
-    }
-
-    fn session_exists(&self, name: &String) -> bool {
-        for session in self.sessions.as_ref().unwrap() {
-            if session.name == *name {
-                return true;
-            }
-        }
-
-        false
     }
 }
