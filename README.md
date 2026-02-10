@@ -66,6 +66,17 @@ zestty is project-centric and employs a few tricks to make sessionizing feel sma
 
 TODO: add GIF fuzzy finding over project list
 
+### Session Cycling
+zestty tracks the sessions you join in the order that you join them, allowing you to cycle through your active sessions.
+
+- `zestty previous`: switch to the previous session in the cycle
+- `zestty next`: switch to the next session in the cycle
+
+### Jump To Previous
+zestty also tracks the last session you were attached to, allowing you to quickly jump back to your last session if it is active.
+
+- `zestty back`: jump back to the last active session
+
 ## Configuration
 
 ### Projects
