@@ -48,7 +48,7 @@ Each sessionizable item has a corresponding sessionizer that creates or attaches
 - `zestty sessionize <item>`: runs the sessionizer associated with item, creating or attaching to a session
 
 #### Smart Sessionizing
-zestty is project-centric and employs a few a tricks to make sessionizing feel smart.
+zestty is project-centric and employs a few tricks to make sessionizing feel smart.
 
 - `session` and `project`: If the session is dead and its name matches that of a project, the session is deleted and recreated so that command panes execute immediately.
 - `worktree`: If the path matches the path of a project, that project is sessionized.
@@ -96,8 +96,11 @@ zestty allows the user to configure the delimiters used in session lines.
 > [!TIP]
 > Download the zestty plugin and change `ZESTTY_PLUGIN_URL` to point to your local copy!
 
+## Installation
+TODO
+
 ## Extending zestty
-You can define custom shell functions to extend the listing and sessionizing capabilities of zestty. These custom shell functions run within the zestty environment and can make use of internal zestty functions. See [this page]() for the list of these functions and what they do.
+You can define custom shell functions to extend the listing and sessionizing capabilities of zestty. These custom shell functions run within the zestty environment and can make use of internal zestty functions. See [this page](INTERNALS.md) for the list of these functions and what they do.
 
 > [!TIP]
 > You can place these custom functions within your configuration file to make them available to zestty.
@@ -137,6 +140,9 @@ zestty_sessionize_dir() {
     esac
 }
 ```
+
+## Plugin
+TODO
 
 ## AI Use
 AI use was kept to a minimum on this project. zestty was written "the old-fashioned way", with a few minor edits attributable to AI. Maybe this is obvious given that this project is not 50k lines long. Anything that makes its way to the main branch will have been reviewed by myself, always.
