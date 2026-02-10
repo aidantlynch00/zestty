@@ -12,7 +12,8 @@ A POSIX-compliant shell script and accompanying [zellij](https://zellij.dev/) pl
 TODO: add a GIF demonstrating core features
 
 ## Usage
-**Note**: Use `zestty help` to see the full help text. Run each command with no arguments to print its help text.
+> [!NOTE]
+> Use `zestty help` to see the full help text. Run each command with no arguments to print its help text.
 
 ### Create and Attach
 - `zestty create <name> [path] [layout]`: create a new session (works within a session)
@@ -33,7 +34,8 @@ TODO: add GIF creating a session within a session
     - See instructions [below](#projects) to configure your project list
 
 #### Git
-**Note**: current working directory must be within a git repository
+> [!NOTE]
+> Current working directory must be within a git repository
 
 - `zestty list worktrees`: list git worktrees
 - `zestty list submodules`: list git submodules
@@ -50,13 +52,15 @@ zestty is project-centric and employs a few a tricks to make sessionizing feel s
 
 - `session` and `project`: If the session is dead and its name matches that of a project, the session is deleted and recreated so that command panes execute immediately.
 - `worktree`: If the path matches the path of a project, that project is sessionized.
-    - **Tip**: Use this to have a code review worktree with a layout designed for reviewing diffs.
+    > [!TIP]
+    > Use this to have a code review worktree with a layout designed for reviewing diffs.
 - `submodule`:
     - If the name matches a project name, the project's layout is used when sessionizing the submodule.
     - If the path matches the path of a project, that project is sessionized.
 
 ### Picking Sessions
-**Note**: Requires [fzf](https://github.com/junegunn/fzf) to be available in your PATH
+> [!NOTE]
+> Requires [fzf](https://github.com/junegunn/fzf) to be available in your PATH
 
 - `zestty pick`: fuzzy find over lists, sessionizing your selection
 
@@ -89,12 +93,14 @@ zestty allows the user to configure the delimiters used in session lines.
     - follows the zellij convention for plugin URLs
     - defaults to 'https://github.com/aidantlynch00/zestty/releases/latest/download/zestty.wasm'
 
-**Tip**: Download the zestty plugin and change `ZESTTY_PLUGIN_URL` to point to your local copy!
+> [!TIP]
+> Download the zestty plugin and change `ZESTTY_PLUGIN_URL` to point to your local copy!
 
 ## Extending zestty
 You can define custom shell functions to extend the listing and sessionizing capabilities of zestty. These custom shell functions run within the zestty environment and can make use of internal zestty functions. See [this page]() for the list of these functions and what they do.
 
-**Tip**: You can place these custom functions within your configuration file to make them available to zestty.
+> [!TIP]
+> You can place these custom functions within your configuration file to make them available to zestty.
 
 ### Custom Session Lists
 Define a `zestty_list_custom` shell function to make a custom list available via `zestty list custom`. Your list can consist of builtin item types or you can define your own custom item type.
