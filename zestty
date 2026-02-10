@@ -3,7 +3,7 @@
 # Use strict error handling
 set -eu
 
-CWD=$(pwd)
+ZESTTY_CWD=$(pwd)
 
 bold()    { printf "\033[1m%s\033[0m" "$*"; }
 success() { printf "\033[32m%s\033[0m\n" "$*"; }
@@ -254,7 +254,7 @@ zestty_create() {
             zestty_create_usage
     fi
 
-    _c_cwd=$CWD
+    _c_cwd=$ZESTTY_CWD
     _c_name="$1"
     _c_path=${2:-"$_c_cwd"}
     _c_layout=${3:-}
@@ -502,7 +502,7 @@ zestty_list_submodules() {
 
     git submodule | \
     sed -n "s/^ [a-f0-9]* \+\(.*\) \+(.*)$/\1/p" | \
-    xargs -I{} realpath "$CWD/{}" | \
+    xargs -I{} realpath "$ZESTTY_CWD/{}" | \
     sed -n "s/^\(.*\/\)\([^\/]*\)$/submodule$ZESTTY_DELIM\2$ZESTTY_DELIM\1\2/p"
 }
 
