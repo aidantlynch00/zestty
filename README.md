@@ -34,13 +34,13 @@ TODO: add GIF creating a session within a session
     - See instructions [below](#projects) to configure your project list
 
 #### Git
-> [!NOTE]
-> Current working directory must be within a git repository
-
 - `zestty list worktrees`: list git worktrees
 - `zestty list submodules`: list git submodules
 
 TODO: add GIF listing project sessions
+
+> [!NOTE]
+> Current working directory must be within a git repository
 
 ### Sessionize
 Each sessionizable item has a corresponding sessionizer that creates or attaches to a zellij session.
@@ -52,8 +52,8 @@ zestty is project-centric and employs a few a tricks to make sessionizing feel s
 
 - `session` and `project`: If the session is dead and its name matches that of a project, the session is deleted and recreated so that command panes execute immediately.
 - `worktree`: If the path matches the path of a project, that project is sessionized.
-    > [!TIP]
-    > Use this to have a code review worktree with a layout designed for reviewing diffs.
+> [!TIP]
+> Use this to have a code review worktree with a layout designed for reviewing diffs.
 - `submodule`:
     - If the name matches a project name, the project's layout is used when sessionizing the submodule.
     - If the path matches the path of a project, that project is sessionized.
