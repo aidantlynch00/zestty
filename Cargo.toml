@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Aidan Lynch <aidantlynch00@gmail.com>"]
 edition = "2024"
 repository = "https://github.com/aidantlynch00/zestty"
+rust-version = "1.88" # stabilized if-let chains
 
 [features]
 tracing = []
