@@ -90,10 +90,8 @@ zestty looks in the following locations for a configuration file:
 This file is sourced at runtime to configure zestty. All of the following values are also configurable via environment variable, which take precendence over the configuration file.
 
 #### Delimiters
-zestty allows the user to configure the delimiters used in session lines.
-
-`ZESTTY_DELIM`: single character, changes the delimiter zestty uses when listing and sessionizing sessions (default ':').
-`ZESTTY_PROJECT_DELIM`: single character, changes the delimiter zestty uses to split lines in the projects file (default ':').
+- `ZESTTY_DELIM`: single character, changes the delimiter zestty uses when listing and sessionizing sessions (default ':').
+- `ZESTTY_PROJECT_DELIM`: single character, changes the delimiter zestty uses to split lines in the projects file (default ':').
 
 #### Plugin URL
 - `ZESTTY_PLUGIN_URL`: changes the plugin location zestty uses when communicating with the zestty plugin.
