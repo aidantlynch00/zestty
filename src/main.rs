@@ -81,6 +81,7 @@ impl ZellijPlugin for Zestty {
         ];
 
         request_permission(permissions);
+        show_self(true);
         tracing::info!("requested permissions {:?}", permissions);
     }
 
