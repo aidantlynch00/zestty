@@ -19,8 +19,6 @@ TODO: add a GIF demonstrating core features
 - `zestty create <name> [path] [layout]`: create a new session (works within a session)
 - `zestty attach <name>`: attach to an existing session (works within a session)
 
-TODO: add GIF creating a session within a session
-
 ### Session Lists
 `zestty list` prints lists of sessionizable items.
 
@@ -36,8 +34,6 @@ TODO: add GIF creating a session within a session
 #### Git
 - `zestty list worktrees`: list git worktrees
 - `zestty list submodules`: list git submodules
-
-TODO: add GIF listing project sessions
 
 > [!NOTE]
 > Current working directory must be within a git repository
@@ -67,7 +63,7 @@ zestty is project-centric and employs a few tricks to make sessionizing feel sma
 TODO: add GIF fuzzy finding over project list
 
 ### Session Cycling
-zestty tracks the sessions you join in the order that you join them, allowing you to cycle through your active sessions.
+zestty tracks the sessions you join in the order that you join them, allowing you to cycle through your active sessions. Attaching to a session already in the cycle moves you to that point in the cycle.
 
 - `zestty previous`: switch to the previous session in the cycle
 - `zestty next`: switch to the next session in the cycle
@@ -108,7 +104,21 @@ zestty allows the user to configure the delimiters used in session lines.
 > Download the zestty plugin and change `ZESTTY_PLUGIN_URL` to point to your local copy!
 
 ## Installation
-TODO
+A minimal installation of zestty only requires you to download the [zestty script](https://github.com/aidantlynch00/zestty/releases/latest/download/zestty). Since zellij can download plugins over HTTP and cache them, by default zestty uses the latest release of the plugin hosted on GitHub. A prebuilt plugin binary or an archive of both the script and plugin binary can be downloaded on the [releases page](https://github.com/aidantlynch00/zestty/releases/latest).
+
+### From Source
+To clone and build the plugin from source, run the following:
+
+```sh
+git clone https://github.com/aidantlynch00/zestty.git
+cd zestty
+
+# ensure you have the wasm32-wasip1 toolchain
+rustup target add wasm32-wasip1
+cargo build --release
+```
+
+The plugin binary will be available at target/wasm32-wasip1/release/zestty.wasm. Copy the zestty script to a location in your PATH and configure your [plugin URL](#plugin-url) to point to the newly built binary.
 
 ## Extending zestty
 You can define custom shell functions to extend the listing and sessionizing capabilities of zestty. These custom shell functions run within the zestty environment and can make use of internal zestty functions. See [this page](INTERNALS.md) for the list of these functions and what they do.
@@ -142,8 +152,8 @@ zestty_sessionize_dir() {
         return
     fi
 
-    basename=$(basename "$path")
-    name="DIR_$basename"
+    base=$(basename "$path")
+    name="DIR_$base"
     state=$(zestty_get_session_state "$name")
     case "$state" in
         "dne") zestty_create "$name" "$path";;
@@ -153,7 +163,7 @@ zestty_sessionize_dir() {
 ```
 
 ## Plugin
-TODO
+The zestty script pipes messages to the zestty plugin to enable certain features. While I recommend you use the zestty package as a whole, it is possible to use the zestty plugin standalone. See [this page](PLUGIN.md) for more information on how to use the zestty plugin.
 
 ## AI Use
 AI use was kept to a minimum on this project. zestty was written "the old-fashioned way", with a few minor edits attributable to AI. Maybe this is obvious given that this project is not 50k lines long. Anything that makes its way to the main branch will have been reviewed by myself, always.
