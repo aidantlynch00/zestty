@@ -29,7 +29,7 @@ TODO: add a GIF demonstrating core features
 
 #### Projects
 - `zestty list projects`: list your projects
-    - See instructions [below](#projects) to configure your project list
+    - See instructions [below](#projects-1) to configure your project list
 
 #### Git
 - `zestty list worktrees`: list git worktrees
@@ -166,4 +166,4 @@ The zestty script pipes messages to the zestty plugin to enable certain features
 ## AI Use
 AI use was kept to a minimum on this project. zestty was written "the old-fashioned way", with a few minor edits attributable to AI. Maybe this is obvious given that this project is not 50k lines long. Anything that makes its way to the main branch will have been reviewed by myself, always.
 
-Reviewing the zestty script for POSIX compliance is where I found AI to be the most useful. Using [opencode](https://github.com/sst/opencode) with web tools and the [POSIX standard](https://pubs.opengroup.org/onlinepubs/9699919799/), I was able have an agent comb through the zestty script, checking against the standard for compliance. When the agent found a violation, it had the standard in context and could offer suggestions for making my logic compliant. Additionally, opencode can send program output to the agent, allowing the agent to offer suggestions for fixing issues found by [shellcheck](https://github.com/koalaman/shellcheck).
+Reviewing the zestty script for POSIX compliance is where I found AI to be the most useful. Using [opencode](https://github.com/anomalyco/opencode) with web tools and the [POSIX standard](https://pubs.opengroup.org/onlinepubs/9699919799/), I was able have an agent comb through the zestty script, checking against the standard for compliance. When the agent found a violation, it had the standard in context and could offer suggestions for making my logic compliant. Additionally, opencode can send program output to the agent, allowing the agent to offer suggestions for fixing issues found by [shellcheck](https://github.com/koalaman/shellcheck).
