@@ -59,7 +59,7 @@ usage: zestty create <name> [path] [layout]
 $(bold "Parameters")
 name        name of the session
 path        working directory for the session, defaults to current directory
-layout      name of the layout to use, default layout if not provided
+layout      name of the layout to use, configured default layout if not provided
 EOF
 }
 
@@ -163,6 +163,22 @@ zestty_get_session_state() {
     fi
 }
 
+zestty_call_plugin() {
+    _cp_payload=${1-}
+    _cp_session=${2-"$ZELLIJ_SESSION_NAME"}
+
+    if [ -n "$_cp_session" ]; then
+        _cp_session_opt="--session $_cp_session"
+    else
+        _cp_session_opt=""
+    fi
+
+    command zellij $_cp_session_opt pipe \
+        --plugin "$ZESTTY_PLUGIN_URL" \
+        --plugin-configuration "default_layout=$ZESTTY_DEFAULT_LAYOUT" \
+        -- "$_cp_payload"
+}
+
 # Create a backgrounded subshell to call out to the zestty plugin to add the
 # session to the history cycle once we are inside our target session.
 zestty_call_add_session_to_cycle() {
@@ -172,9 +188,7 @@ zestty_call_add_session_to_cycle() {
     (
         {
             sleep 1
-            exec zellij --session "$_ca_name" \
-                pipe --plugin "$ZESTTY_PLUGIN_URL" -- \
-                "{ \"command\": \"add-session-to-cycle\" }"
+            zestty_call_plugin "{ \"command\": \"add-session-to-cycle\" }" "$_ca_name"
         } > /dev/null 2>&1 &
     )
 }
@@ -198,7 +212,7 @@ zestty_call_switch_session() {
     fi
 
     _cs_options="$_cs_options }"
-    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "$_cs_options"
+    zestty_call_plugin "$_cs_options"
 }
 
 zestty_match_project_name() {
@@ -257,7 +271,7 @@ zestty_create() {
     _c_cwd=$ZESTTY_CWD
     _c_name="$1"
     _c_path=${2:-"$_c_cwd"}
-    _c_layout=${3:-"default"}
+    _c_layout=${3:-}
 
     case "$_c_name" in
         "-?" | "-h" | "--help")
@@ -296,7 +310,9 @@ zestty_create() {
                 --session "$_c_name" \
                 --new-session-with-layout "$_c_layout"
         else
-            exec zellij --session "$_c_name"
+            exec zellij \
+                --session "$_c_name" \
+                --new-session-with-layout "$ZESTTY_DEFAULT_LAYOUT"
         fi
 
         cd "$_c_cwd"
@@ -741,17 +757,17 @@ zestty_sessionize() {
 
 zestty_previous() {
     [ "$ZELLIJ" = 1 ] && exit_fail "Must be in a zellij session!"
-    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "{ \"command\": \"cycle-previous\" }"
+    zestty_call_plugin "{ \"command\": \"cycle-previous\" }"
 }
 
 zestty_next() {
     [ "$ZELLIJ" = 1 ] && exit_fail "Must be in a zellij session!"
-    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "{ \"command\": \"cycle-next\" }"
+    zestty_call_plugin "{ \"command\": \"cycle-next\" }"
 }
 
 zestty_back() {
     [ "$ZELLIJ" = 1 ] && exit_fail "Must be in a zellij session!"
-    exec zellij pipe --plugin "$ZESTTY_PLUGIN_URL" -- "{ \"command\": \"cycle-back\" }"
+    zestty_call_plugin "{ \"command\": \"cycle-back\" }"
 }
 
 # Do not proceed if config is invalid
@@ -774,6 +790,7 @@ ZELLIJ=${ZELLIJ:-1}
 ZESTTY_DELIM_ENV=${ZESTTY_DELIM:-}
 ZESTTY_PROJECT_DELIM_ENV=${ZESTTY_PROJECT_DELIM:-}
 ZESTTY_PLUGIN_URL_ENV=${ZESTTY_PLUGIN_URL:-}
+ZESTTY_DEFAULT_LAYOUT_ENV=${ZESTTY_DEFAULT_LAYOUT:-}
 
 _z_config_file=$(zestty_find_config_file)
 if [ -n "$_z_config_file" ]; then
@@ -784,19 +801,13 @@ fi
 ZESTTY_DELIM=${ZESTTY_DELIM:-":"}
 ZESTTY_PROJECT_DELIM=${ZESTTY_PROJECT_DELIM:-":"}
 ZESTTY_PLUGIN_URL=${ZESTTY_PLUGIN_URL:-"https://github.com/aidantlynch00/zestty/releases/latest/download/zestty.wasm"}
+ZESTTY_DEFAULT_LAYOUT=${ZESTTY_DEFAULT_LAYOUT:-"default"}
 
 # Prefer values from environment
-if [ -n "$ZESTTY_DELIM_ENV" ]; then
-    ZESTTY_DELIM=$ZESTTY_DELIM_ENV
-fi
-
-if [ -n "$ZESTTY_PROJECT_DELIM_ENV" ]; then
-    ZESTTY_PROJECT_DELIM=$ZESTTY_PROJECT_DELIM_ENV
-fi
-
-if [ -n "$ZESTTY_PLUGIN_URL_ENV" ]; then
-    ZESTTY_PLUGIN_URL=$ZESTTY_PLUGIN_URL_ENV
-fi
+[ -n "$ZESTTY_DELIM_ENV" ] && ZESTTY_DELIM=$ZESTTY_DELIM_ENV
+[ -n "$ZESTTY_PROJECT_DELIM_ENV" ] && ZESTTY_PROJECT_DELIM=$ZESTTY_PROJECT_DELIM_ENV
+[ -n "$ZESTTY_PLUGIN_URL_ENV" ] && ZESTTY_PLUGIN_URL=$ZESTTY_PLUGIN_URL_ENV
+[ -n "$ZESTTY_DEFAULT_LAYOUT_ENV" ] && ZESTTY_DEFAULT_LAYOUT=$ZESTTY_DEFAULT_LAYOUT_ENV
 
 case "$_z_command" in
     "-?" | "-h" | "--help" | "h" | "help") zestty_usage;;
