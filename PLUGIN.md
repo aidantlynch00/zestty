@@ -20,7 +20,7 @@ Creates or switches to a session by name with an optional working directory and 
 **Parameters:**
 - `name` (required): Session name to switch to or create
 - `path` (optional): Working directory for the session
-- `layout` (optional): Layout file to use
+- `layout` (optional): Layout file to use, defaults to "default"
 
 ### Add Session to Cycle
 Records the current session in the navigation history.

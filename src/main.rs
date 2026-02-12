@@ -62,10 +62,8 @@ impl ZellijPlugin for Zestty {
     #[tracing::instrument(skip_all)]
     fn load(&mut self, _configuration: BTreeMap<String, String>) {
         #[cfg(feature = "tracing")]
-        {
-            init_tracing();
-            tracing::debug!("tracing initialized");
-        }
+        init_tracing();
+        tracing::debug!("tracing initialized");
 
         let events = &[
             EventType::PermissionRequestResult,

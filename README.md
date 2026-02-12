@@ -1,5 +1,5 @@
 # zestty
-A POSIX-compliant shell script and accompanying [zellij](https://zellij.dev/) plugin for quickly moving between your project sessions.
+A POSIX-compliant shell script and accompanying zellij plugin for quickly moving between your project sessions.
 
 ## Features
 - **Create** and **attach** to sessions from within a zellij session
@@ -10,6 +10,14 @@ A POSIX-compliant shell script and accompanying [zellij](https://zellij.dev/) pl
 - Jump **back** to the last session
 
 TODO: add a GIF demonstrating core features
+
+## Requirements
+- [zellij](https://zellij.dev/) >= v0.40.0
+    - A default zellij layout named "default" in your layouts directory (see [limitations](#limitations))
+- [fzf](https://github.com/junegunn/fzf) >= v0.65.0 (optional, enables session picking)
+
+> [!WARNING]
+> I have only verified functionality using zellij v0.43.1 and fzf 0.67.0.
 
 ## Usage
 > [!NOTE]
@@ -56,7 +64,7 @@ zestty is project-centric and employs a few tricks to make sessionizing feel sma
 
 ### Picking Sessions
 > [!NOTE]
-> Requires [fzf](https://github.com/junegunn/fzf) to be available in your PATH
+> Requires `fzf` to be available in your PATH
 
 - `zestty pick`: fuzzy find over lists, sessionizing your selection
 
@@ -162,6 +170,10 @@ zestty_sessionize_dir() {
 
 ## Plugin
 The zestty script pipes messages to the zestty plugin to enable certain features. While I recommend you use the zestty package as a whole, it is possible to use the zestty plugin standalone. See [this page](PLUGIN.md) for more information on how to use the zestty plugin.
+
+## Limitations
+- zestty does not pass flags through to zellij. If you would like to change the configuration file location or configuration directory, prefer the `ZELLIJ_CONFIG_FILE` and `ZELLIJ_CONFIG_DIR` environment variables.
+- zestty cannot determine the user's configured default layout and falls back to the layout file named "default" when a layout is not provided. Ensure that you have a layout named "default" in your layouts directory.
 
 ## AI Use
 AI use was kept to a minimum on this project. zestty was written "the old-fashioned way", with a few minor edits attributable to AI. Maybe this is obvious given that this project is not 50k lines long. Anything that makes its way to the main branch will have been reviewed by myself, always.

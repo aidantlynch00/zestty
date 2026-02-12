@@ -257,7 +257,7 @@ zestty_create() {
     _c_cwd=$ZESTTY_CWD
     _c_name="$1"
     _c_path=${2:-"$_c_cwd"}
-    _c_layout=${3:-}
+    _c_layout=${3:-"default"}
 
     case "$_c_name" in
         "-?" | "-h" | "--help")
