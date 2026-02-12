@@ -38,6 +38,7 @@ struct Zestty {
     buffered_command: Option<Command>,
     permission_granted: Option<bool>,
     sessions: Option<Vec<SessionInfo>>,
+    default_layout: Option<String>,
     cycle: SessionCycle,
 }
 
@@ -63,7 +64,7 @@ enum Command {
 
 impl ZellijPlugin for Zestty {
     #[tracing::instrument(skip_all)]
-    fn load(&mut self, _configuration: BTreeMap<String, String>) {
+    fn load(&mut self, mut configuration: BTreeMap<String, String>) {
         #[cfg(feature = "tracing")]
         init_tracing();
         tracing::debug!("tracing initialized");
@@ -94,6 +95,9 @@ impl ZellijPlugin for Zestty {
 
         request_permission(permissions);
         tracing::info!("requested permissions {:?}", permissions);
+
+        // take from map to avoid allocation
+        self.default_layout = configuration.remove("default_layout");
     }
 
     #[tracing::instrument(skip_all)]
@@ -231,9 +235,14 @@ impl Zestty {
         let SwitchSessionArgs { name, path, layout } = args;
 
         let cwd = path.map(PathBuf::from);
+        let default_layout = self.default_layout
+            .as_deref()
+            .unwrap_or("default")
+            .to_string();
+
         let layout = match layout {
             Some(layout) => LayoutInfo::File(layout),
-            None => LayoutInfo::File(String::from("default"))
+            None => LayoutInfo::File(default_layout)
         };
 
         // add the session to the cycle
