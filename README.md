@@ -16,7 +16,7 @@ https://github.com/user-attachments/assets/f255e42e-13f6-4d1d-8c1d-e2f4909ef1b5
     - A default zellij layout named "default" in your layouts directory (see [limitations](#limitations))
 - `git` for worktree and submodule lists
 - [fzf](https://github.com/junegunn/fzf) >= v0.65.0 (optional, enables session picking)
-- Common utilities: `awk`, `basename`, `cut`, `grep`, `realpath`, `sed`, `sleep`, `xargs`
+- Common utilities: `awk`, `basename`, `cat`, `cut`, `grep`, `head`, `printf`, `realpath`, `sed`, `sleep`, `xargs`
 
 > [!WARNING]
 > I have only verified functionality using zellij v0.43.1 and fzf 0.67.0.
