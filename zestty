@@ -638,7 +638,12 @@ zestty_sessionize_worktree() {
         return
     fi
 
-    _sw_main_path=$(git worktree list --porcelain | head -n1 | sed "s/^worktree //")
+    _sw_main_path=$(
+        git -C "$_sw_path" worktree list --porcelain | \
+        head -n1 | \
+        sed "s/^worktree //"
+    )
+
     _sw_project=$(zestty_match_project_path "$_sw_main_path")
     if [ -n "$_sw_project" ]; then
         _sw_array=$(zestty_split_string "$_sw_project")
