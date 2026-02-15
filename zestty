@@ -624,6 +624,7 @@ zestty_sessionize_project() {
 
 zestty_sessionize_worktree() {
     _sw_path=${2:-}
+    _sw_layout=""
 
     if [ -z "$_sw_path" ]; then
         exit_fail "Worktree path required!"
@@ -637,10 +638,18 @@ zestty_sessionize_worktree() {
         return
     fi
 
+    _sw_main_path=$(git worktree list --porcelain | head -n1 | sed "s/^worktree //")
+    _sw_project=$(zestty_match_project_path "$_sw_main_path")
+    if [ -n "$_sw_project" ]; then
+        _sw_array=$(zestty_split_string "$_sw_project")
+        eval "set -- $_sw_array"
+        _sw_layout="${4:-}"
+    fi
+
     _sw_name=$(basename "$_sw_path")
     _sw_state=$(zestty_get_session_state "$_sw_name")
     case "$_sw_state" in
-        "dne") zestty_create "$_sw_name" "$_sw_path";;
+        "dne") zestty_create "$_sw_name" "$_sw_path" "$_sw_layout";;
         "dead" | "active") zestty_attach "$_sw_name";;
     esac
 }
