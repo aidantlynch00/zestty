@@ -4,13 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag name (e.g., v0.1.0)'
-        required: true
-      release_name:
-        description: 'Release title'
+        description: 'Tag name (e.g. v0.1.0)'
         required: true
       prerelease:
-        description: 'Mark as pre-release?'
+        description: 'Pre-release?'
         type: boolean
         default: false
 
@@ -29,18 +26,21 @@ jobs:
       - name: Create release archives
         run: |
           mkdir -p release
+          cp README.md release/
           cp zestty release/
           cp target/wasm32-wasip1/release/zestty.wasm release/
-          cp README.md release/
-          tar czf release/zestty.tar.gz -C release zestty zestty.wasm README.md
-          zip release/zestty.zip -j release/zestty release/zestty.wasm release/README.md
+
+          cd release
+          tar czf zestty.tar.gz zestty zestty.wasm README.md
+          zip zestty.zip zestty zestty.wasm README.md
+          cd ..
 
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.inputs.tag_name }}
-          name: ${{ github.inputs.release_name }}
+          name: ${{ github.inputs.tag_name }}
           prerelease: ${{ github.inputs.prerelease }}
-          generate_release_notes: true
+          generate_release_notes: false
           files: |
             release/zestty
             release/zestty.wasm
