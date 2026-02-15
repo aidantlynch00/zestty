@@ -1,7 +1,30 @@
 use std::num::ParseIntError;
 use std::cmp::Ordering;
+use std::fmt::{self, Display};
 
-#[derive(PartialEq, Eq)]
+#[derive(Default)]
+pub struct CompatibilityInfo {
+    pub min_version: SemanticVersion,
+    pub actual_version: Option<SemanticVersion>,
+}
+
+impl CompatibilityInfo {
+    pub const fn new(version: Option<SemanticVersion>) -> Self {
+        Self {
+            min_version: SemanticVersion::new(0, 40, 0),
+            actual_version: version,
+        }
+    }
+
+    pub fn compatible(&self) -> bool {
+        match &self.actual_version {
+            Some(version) if *version >= self.min_version => true,
+            _ => false
+        }
+    }
+}
+
+#[derive(Default, PartialEq, Eq)]
 pub struct SemanticVersion {
     major: usize,
     minor: usize,
@@ -34,6 +57,12 @@ impl<'a> TryFrom<&'a str> for SemanticVersion
             }),
             _ => Err(SemanticVersionError)
         }
+    }
+}
+
+impl Display for SemanticVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
     }
 }
 

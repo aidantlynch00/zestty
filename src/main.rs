@@ -7,7 +7,7 @@ use zellij_tile::prelude::*;
 use serde::{Serialize, Deserialize};
 use serde_json;
 use cycle::{SessionCycle, LoadError, SaveError};
-use version::SemanticVersion;
+use version::{CompatibilityInfo, SemanticVersion};
 
 #[cfg(feature = "tracing")]
 pub fn init_tracing() {
@@ -33,6 +33,7 @@ pub fn init_tracing() {
 
 #[derive(Default)]
 struct Zestty {
+    compat_info: CompatibilityInfo,
     buffered_events: Vec<Event>,
     buffered_command: Option<Command>,
     permission_granted: Option<bool>,
@@ -67,6 +68,17 @@ impl ZellijPlugin for Zestty {
         init_tracing();
         tracing::debug!("tracing initialized");
 
+        self.set_compatibility();
+
+        // show plugin pane on load
+        show_self(true);
+
+        // do not subscribe to events or request permissions if not compatible
+        if !self.compat_info.compatible() {
+            tracing::error!("versions are incompatible");
+            return;
+        }
+
         let events = &[
             EventType::PermissionRequestResult,
             EventType::SessionUpdate,
@@ -79,11 +91,6 @@ impl ZellijPlugin for Zestty {
             PermissionType::ReadApplicationState,
             PermissionType::ChangeApplicationState,
         ];
-
-        show_self(true);
-
-        let version = get_zellij_version();
-        self.check_compatibility(&version);
 
         request_permission(permissions);
         tracing::info!("requested permissions {:?}", permissions);
@@ -136,11 +143,36 @@ impl ZellijPlugin for Zestty {
     }
 
     #[tracing::instrument(skip_all)]
-    fn render(&mut self, _rows: usize, _cols: usize) { }
+    fn render(&mut self, _rows: usize, _cols: usize) {
+        // do not render if versions are compatible
+        if self.compat_info.compatible() {
+            tracing::info!("rendering compatibility info");
+            return;
+        }
+
+        let min_version = format!("{}   ", self.compat_info.min_version);
+
+        let (help_text, actual_version) = match &self.compat_info.actual_version {
+            Some(version) =>
+                ("Minimum zellij version not met!", format!("{}", version)),
+            None =>
+                ("Could not parse zellij version!", String::default()),
+        };
+
+        print_text(Text::new(help_text).color_all(1));
+
+        let table = Table::new()
+            .add_row(vec!["Minimum Version   ", "Actual Version"])
+            .add_styled_row(vec![
+                Text::new(min_version).color_all(0),
+                Text::new(actual_version).color_all(0)
+            ]);
+
+        print_table_with_coordinates(table, 0, 2, None, None);
+    }
 }
 
 impl Zestty {
-    const MINIMUM_SUPPORTED_VERSION: SemanticVersion = SemanticVersion::new(0, 40, 0);
     const SESSIONS_FILE: &'static str = "/tmp/zestty_sessions.json";
 
     #[tracing::instrument(skip_all)]
@@ -294,15 +326,13 @@ impl Zestty {
     }
 
     #[tracing::instrument(skip_all)]
-    fn check_compatibility(&mut self, version: &str) {
+    fn set_compatibility(&mut self) {
+        let version = get_zellij_version();
+        let version = version.as_str();
         tracing::debug!("zellij version: {}", version);
 
-        match SemanticVersion::try_from(version) {
-            Ok(version) => if version < Self::MINIMUM_SUPPORTED_VERSION {
-                panic!("Minimum zellij version not met!");
-            },
-            Err(_) => panic!("Could not parse zellij version!")
-        }
+        let version = SemanticVersion::try_from(version).ok();
+        self.compat_info = CompatibilityInfo::new(version);
     }
 
     fn find_session(&self) -> Option<String> {
