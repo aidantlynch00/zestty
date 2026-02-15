@@ -9,7 +9,7 @@ A POSIX-compliant shell script and accompanying zellij plugin for quickly moving
 - **Cycle** through active sessions
 - Jump **back** to the last session
 
-TODO: add a GIF demonstrating core features
+https://github.com/user-attachments/assets/f255e42e-13f6-4d1d-8c1d-e2f4909ef1b5
 
 ## Requirements
 - [zellij](https://zellij.dev/) >= v0.40.0
@@ -70,7 +70,7 @@ zestty is project-centric and employs a few tricks to make sessionizing feel sma
 
 - `zestty pick`: fuzzy find over lists, sessionizing your selection
 
-TODO: add GIF fuzzy finding over project list
+![Projects demo](assets/pick-projects.gif)
 
 ### Session Cycling
 zestty tracks the sessions you join in the order that you join them, allowing you to cycle through your active sessions. Attaching to a session already in the cycle moves you to that point in the cycle.
