@@ -1,6 +1,6 @@
 [package]
 name = "zestty"
-version = "0.2.0-pre"
+version = "0.2.0"
 authors = ["Aidan Lynch <aidantlynch00@gmail.com>"]
 edition = "2024"
 repository = "https://github.com/aidantlynch00/zestty"
