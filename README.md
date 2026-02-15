@@ -14,7 +14,9 @@ TODO: add a GIF demonstrating core features
 ## Requirements
 - [zellij](https://zellij.dev/) >= v0.40.0
     - A default zellij layout named "default" in your layouts directory (see [limitations](#limitations))
+- `git` for worktree and submodule lists
 - [fzf](https://github.com/junegunn/fzf) >= v0.65.0 (optional, enables session picking)
+- Common utilities: `awk`, `basename`, `cut`, `grep`, `realpath`, `sed`, `sleep`, `xargs`
 
 > [!WARNING]
 > I have only verified functionality using zellij v0.43.1 and fzf 0.67.0.

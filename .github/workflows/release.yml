@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name (e.g., v0.1.0)'
+        required: true
+      release_name:
+        description: 'Release title'
+        required: true
+      prerelease:
+        description: 'Mark as pre-release?'
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+
+      - run: cargo build --release
+
+      - name: Create release archives
+        run: |
+          mkdir -p release
+          cp zestty release/
+          cp target/wasm32-wasip1/release/zestty.wasm release/
+          cp README.md release/
+          tar czf release/zestty.tar.gz -C release zestty zestty.wasm README.md
+          zip release/zestty.zip -j release/zestty release/zestty.wasm release/README.md
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.inputs.tag_name }}
+          name: ${{ github.inputs.release_name }}
+          prerelease: ${{ github.inputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            release/zestty
+            release/zestty.wasm
+            release/zestty.tar.gz
+            release/zestty.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
