@@ -40,9 +40,9 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.inputs.tag_name }}
-          name: ${{ github.inputs.tag_name }}
-          prerelease: ${{ github.inputs.prerelease }}
+          tag_name: ${{ github.event.inputs.tag_name }}
+          name: ${{ github.event.inputs.tag_name }}
+          prerelease: ${{ github.event.inputs.prerelease }}
           generate_release_notes: false
           files: |
             release/zestty
