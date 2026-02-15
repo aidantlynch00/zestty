@@ -62,6 +62,13 @@ impl SessionCycle {
 
     fn update_curr(&mut self) {
         let session = self.sessions.front().map(String::clone);
+
+        // do nothing if front of cycle is current session
+        match (self.curr.as_ref(), session.as_ref()) {
+            (Some(curr), Some(session)) if *curr == *session => return,
+            _ => { },
+        }
+
         self.prev = self.curr.take();
         self.curr = session;
     }
