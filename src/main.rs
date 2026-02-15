@@ -1,4 +1,5 @@
 mod cycle;
+mod version;
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -6,6 +7,7 @@ use zellij_tile::prelude::*;
 use serde::{Serialize, Deserialize};
 use serde_json;
 use cycle::{SessionCycle, LoadError, SaveError};
+use version::SemanticVersion;
 
 #[cfg(feature = "tracing")]
 pub fn init_tracing() {
@@ -78,8 +80,12 @@ impl ZellijPlugin for Zestty {
             PermissionType::ChangeApplicationState,
         ];
 
-        request_permission(permissions);
         show_self(true);
+
+        let version = get_zellij_version();
+        self.check_compatibility(&version);
+
+        request_permission(permissions);
         tracing::info!("requested permissions {:?}", permissions);
     }
 
@@ -134,6 +140,7 @@ impl ZellijPlugin for Zestty {
 }
 
 impl Zestty {
+    const MINIMUM_SUPPORTED_VERSION: SemanticVersion = SemanticVersion::new(0, 40, 0);
     const SESSIONS_FILE: &'static str = "/tmp/zestty_sessions.json";
 
     #[tracing::instrument(skip_all)]
@@ -283,6 +290,18 @@ impl Zestty {
                 tracing::error!("could not create sessions file: {}", io_err),
             Err(SaveError::CouldNotSerialize(se_err)) =>
                 tracing::error!("could not serialize sessions: {}", se_err),
+        }
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn check_compatibility(&mut self, version: &str) {
+        tracing::debug!("zellij version: {}", version);
+
+        match SemanticVersion::try_from(version) {
+            Ok(version) => if version < Self::MINIMUM_SUPPORTED_VERSION {
+                panic!("Minimum zellij version not met!");
+            },
+            Err(_) => panic!("Could not parse zellij version!")
         }
     }
 
