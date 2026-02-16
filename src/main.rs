@@ -150,11 +150,11 @@ impl ZellijPlugin for Zestty {
             return;
         }
 
-        let min_version = format!("{}   ", self.compat_info.min_version);
+        let min_version = self.compat_info.min_version.to_string();
 
         let (help_text, actual_version) = match &self.compat_info.actual_version {
             Some(version) =>
-                ("Minimum zellij version not met!", format!("{}", version)),
+                ("Minimum zellij version not met!", version.to_string()),
             None =>
                 ("Could not parse zellij version!", String::default()),
         };
