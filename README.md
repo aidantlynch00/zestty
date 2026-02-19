@@ -33,7 +33,7 @@ A POSIX-compliant shell script and accompanying zellij plugin for quickly moving
 > [!NOTE]
 > Requires `fzf` to be available in your PATH
 
-- `zestty pick`: fuzzy find over lists, sessionizing your selection
+- `zestty pick <list>`: fuzzy find over [lists](#session-lists), sessionizing your selection
 
 ![Projects demo](assets/pick-projects.gif)
 
