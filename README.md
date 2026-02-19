@@ -57,12 +57,14 @@ Each sessionizable item has a corresponding sessionizer that creates or attaches
 zestty is project-centric and employs a few tricks to make sessionizing feel smart.
 
 - `session` and `project`: If the session is dead and its name matches that of a project, the session is deleted and recreated so that command panes execute immediately.
-- `worktree`: If the path matches the path of a project, that project is sessionized.
+- `worktree`:
+    - If the worktree path matches the path of a project, that project is sessionized.
+    - If the main worktree path matches the path of a project, that project's layout is used when sessionizing the worktree.
 > [!TIP]
 > Use this to have a code review worktree with a layout designed for reviewing diffs.
 - `submodule`:
-    - If the name matches a project name, the project's layout is used when sessionizing the submodule.
-    - If the path matches the path of a project, that project is sessionized.
+    - If the submodule path matches the path of a project, that project is sessionized.
+    - If the submodule name matches a project name, that project's layout is used when sessionizing the submodule.
 
 ### Picking Sessions
 > [!NOTE]
