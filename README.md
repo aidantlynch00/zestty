@@ -29,6 +29,25 @@ A POSIX-compliant shell script and accompanying zellij plugin for quickly moving
 - `zestty create <name> [path] [layout]`: create a new session (works within a session)
 - `zestty attach <name>`: attach to an existing session (works within a session)
 
+### Picking Sessions
+> [!NOTE]
+> Requires `fzf` to be available in your PATH
+
+- `zestty pick`: fuzzy find over lists, sessionizing your selection
+
+![Projects demo](assets/pick-projects.gif)
+
+### Session Cycling
+zestty tracks the sessions you join in the order that you join them, allowing you to cycle through your active sessions. Attaching to a session already in the cycle moves you to that point in the cycle.
+
+- `zestty previous`: switch to the previous session in the cycle
+- `zestty next`: switch to the next session in the cycle
+
+### Jump To Previous
+zestty also tracks the last session you were attached to, allowing you to quickly jump back to your last session if it is active.
+
+- `zestty back`: jump back to the last active session
+
 ### Session Lists
 `zestty list` prints lists of sessionizable items.
 
@@ -65,25 +84,6 @@ zestty is project-centric and employs a few tricks to make sessionizing feel sma
 - `submodule`:
     - If the submodule path matches the path of a project, that project is sessionized.
     - If the submodule name matches a project name, that project's layout is used when sessionizing the submodule.
-
-### Picking Sessions
-> [!NOTE]
-> Requires `fzf` to be available in your PATH
-
-- `zestty pick`: fuzzy find over lists, sessionizing your selection
-
-![Projects demo](assets/pick-projects.gif)
-
-### Session Cycling
-zestty tracks the sessions you join in the order that you join them, allowing you to cycle through your active sessions. Attaching to a session already in the cycle moves you to that point in the cycle.
-
-- `zestty previous`: switch to the previous session in the cycle
-- `zestty next`: switch to the next session in the cycle
-
-### Jump To Previous
-zestty also tracks the last session you were attached to, allowing you to quickly jump back to your last session if it is active.
-
-- `zestty back`: jump back to the last active session
 
 ## Configuration
 
