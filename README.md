@@ -1,6 +1,8 @@
 # zestty
 A POSIX-compliant shell script and accompanying zellij plugin for quickly moving between your project sessions.
 
+![Features demo](assets/features.gif)
+
 ## Features
 - **Create** and **attach** to sessions from within a zellij session
 - **List** sessionizable items
@@ -8,8 +10,6 @@ A POSIX-compliant shell script and accompanying zellij plugin for quickly moving
 - **Pick** an item from a list to sessionize
 - **Cycle** through active sessions
 - Jump **back** to the last session
-
-https://github.com/user-attachments/assets/f255e42e-13f6-4d1d-8c1d-e2f4909ef1b5
 
 ## Requirements
 - [zellij](https://zellij.dev/) >= v0.40.0
