@@ -123,6 +123,7 @@ zestty_config() {
 $(bold "ZESTTY_DELIM")            "$ZESTTY_DELIM"
 $(bold "ZESTTY_PROJECT_DELIM")    "$ZESTTY_PROJECT_DELIM"
 $(bold "ZESTTY_PLUGIN_URL")       "$ZESTTY_PLUGIN_URL"
+$(bold "ZESTTY_DEFAULT_LAYOUT")   "$ZESTTY_DEFAULT_LAYOUT"
 EOF
 }
 
