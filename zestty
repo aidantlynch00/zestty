@@ -644,14 +644,17 @@ zestty_sessionize_worktree() {
         sed "s/^worktree //"
     )
 
+    _sw_name=$(basename "$_sw_path")
     _sw_project=$(zestty_match_project_path "$_sw_main_path")
     if [ -n "$_sw_project" ]; then
         _sw_array=$(zestty_split_string "$_sw_project")
         eval "set -- $_sw_array"
         _sw_layout="${4:-}"
+
+        zestty_sessionize_project "$_sw_name" "$_sw_path" "$_sw_layout"
+        return
     fi
 
-    _sw_name=$(basename "$_sw_path")
     _sw_state=$(zestty_get_session_state "$_sw_name")
     case "$_sw_state" in
         "dne") zestty_create "$_sw_name" "$_sw_path" "$_sw_layout";;
@@ -677,6 +680,9 @@ zestty_sessionize_submodule() {
 
         _su_name="submodule-${_su_name}"
         _su_layout="${4:-}"
+
+        zestty_sessionize_project "$_su_name" "$_su_path" "$_su_layout"
+        return
     else
         _su_project=$(zestty_match_project_path "$_su_path")
         if [ -n "$_su_project" ]; then
