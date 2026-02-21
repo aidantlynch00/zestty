@@ -11,7 +11,7 @@ zellij pipe \
     -- "<payload>"
 ```
 
-Use the `default_layout=<layout>` configuration to change the layout the zestty plugin defaults when no layout is provided to the `switch-session` command. Can be a bare name, an absolute file path, or a URL.
+Use the `default_layout=<layout>` configuration to change the layout the zestty plugin defaults when no layout is provided to the `switch-session` command. Can be the bare name of a layout in your layouts directory, an absolute file path, or a URL.
 
 ## Available Commands
 The following are the different JSON payloads that can be sent to the zestty plugin.

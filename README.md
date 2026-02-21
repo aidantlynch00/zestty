@@ -13,7 +13,7 @@ A POSIX-compliant shell script and accompanying zellij plugin for quickly moving
 
 ## Requirements
 - [zellij](https://zellij.dev/) >= v0.40.0
-    - A default zellij layout named "default" in your layouts directory (see [limitations](#limitations))
+    - A default zellij layout as a fallback (see configuration [here](#default-layout))
 - `git` for worktree and submodule lists
 - [fzf](https://github.com/junegunn/fzf) >= v0.65.0 (optional, enables session picking)
 - Common utilities: `awk`, `basename`, `cat`, `cut`, `grep`, `head`, `printf`, `realpath`, `sed`, `sleep`, `xargs`
@@ -114,10 +114,11 @@ This file is sourced at runtime to configure zestty. All of the following values
 > Download the zestty plugin and change `ZESTTY_PLUGIN_URL` to point to your local copy!
 
 #### Default Layout
-zestty cannot detect the default layout set in your zellij configuration.
+zestty cannot detect the default layout set in your zellij configuration. Set a default layout to use as a fallback when a layout is not specified.
 
 - `ZESTTY_DEFAULT_LAYOUT`: changes the layout zestty defaults to if no layout is specified (default "default")
-    - can be a bare name, an absolute file path, or a URL
+    - can be the bare name of a layout in your layouts directory, an absolute file path, or a URL
+    - see [zellij documentation](https://zellij.dev/documentation/layouts.html) for more info
 
 ## Installation
 A minimal installation of zestty only requires you to download the [zestty script](https://github.com/aidantlynch00/zestty/releases/latest/download/zestty). Since zellij can download plugins over HTTP and cache them, by default zestty uses the latest release of the plugin hosted on GitHub. A prebuilt plugin binary or an archive of both the script and plugin binary can be downloaded on the [releases page](https://github.com/aidantlynch00/zestty/releases/latest).
@@ -183,7 +184,6 @@ The zestty script pipes messages to the zestty plugin to enable certain features
 
 ## Limitations
 - zestty does not pass flags through to zellij. If you would like to change the configuration file location or configuration directory, prefer the `ZELLIJ_CONFIG_FILE` and `ZELLIJ_CONFIG_DIR` environment variables.
-- zestty cannot determine the user's configured default layout and falls back to the layout file named "default" when a layout is not provided. Ensure that you have a layout named "default" in your layouts directory.
 
 ## AI Use
 AI use was kept to a minimum on this project. zestty was written "the old-fashioned way", with a few minor edits attributable to AI. Maybe this is obvious given that this project is not 50k lines long. Anything that makes its way to the main branch will have been reviewed by myself, always.
