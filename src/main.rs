@@ -341,9 +341,12 @@ impl Zestty {
     #[tracing::instrument(skip_all)]
     fn determine_layout(&self, layout: Option<String>) -> LayoutInfo {
         // use or_else's to avoid unnecessary allocations
-        layout.map(to_layout_info)
+        let layout = layout.map(to_layout_info)
             .or_else(|| self.default_layout.clone())
-            .unwrap_or_else(|| LayoutInfo::File(String::from("default")))
+            .unwrap_or_else(|| LayoutInfo::File(String::from("default")));
+
+        tracing::debug!("determined layout: {:?}", layout);
+        return layout;
     }
 
     fn find_session(&self) -> Option<String> {
