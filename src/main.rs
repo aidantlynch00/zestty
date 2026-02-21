@@ -38,7 +38,7 @@ struct Zestty {
     buffered_command: Option<Command>,
     permission_granted: Option<bool>,
     sessions: Option<Vec<SessionInfo>>,
-    default_layout: Option<String>,
+    default_layout: Option<LayoutInfo>,
     cycle: SessionCycle,
 }
 
@@ -97,7 +97,9 @@ impl ZellijPlugin for Zestty {
         tracing::info!("requested permissions {:?}", permissions);
 
         // take from map to avoid allocation
-        self.default_layout = configuration.remove("default_layout");
+        self.default_layout = configuration
+            .remove("default_layout")
+            .map(to_layout_info);
     }
 
     #[tracing::instrument(skip_all)]
@@ -235,15 +237,7 @@ impl Zestty {
         let SwitchSessionArgs { name, path, layout } = args;
 
         let cwd = path.map(PathBuf::from);
-        let default_layout = self.default_layout
-            .as_deref()
-            .unwrap_or("default")
-            .to_string();
-
-        let layout = match layout {
-            Some(layout) => LayoutInfo::File(layout),
-            None => LayoutInfo::File(default_layout)
-        };
+        let layout = self.determine_layout(layout);
 
         // add the session to the cycle
         self.cycle.push(name.clone());
@@ -344,6 +338,14 @@ impl Zestty {
         self.compat_info = CompatibilityInfo::new(version);
     }
 
+    #[tracing::instrument(skip_all)]
+    fn determine_layout(&self, layout: Option<String>) -> LayoutInfo {
+        // use or_else's to avoid unnecessary allocations
+        layout.map(to_layout_info)
+            .or_else(|| self.default_layout.clone())
+            .unwrap_or_else(|| LayoutInfo::File(String::from("default")))
+    }
+
     fn find_session(&self) -> Option<String> {
         for session in self.sessions.as_ref()? {
             if session.is_current_session {
@@ -352,5 +354,20 @@ impl Zestty {
         }
 
         None
+    }
+}
+
+fn to_layout_info(layout: String) -> LayoutInfo {
+    if let Some(builtin) = layout.strip_prefix("zellij:") {
+        LayoutInfo::BuiltIn(builtin.to_string())
+    }
+    else if layout.starts_with("http:") || layout.starts_with("https:") {
+        LayoutInfo::Url(layout)
+    }
+    else {
+        match layout.strip_prefix("file:") {
+            Some(file) => LayoutInfo::File(file.to_string()),
+            None => LayoutInfo::File(layout),
+        }
     }
 }
