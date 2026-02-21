@@ -100,16 +100,22 @@ zestty looks in the following locations for a configuration file:
 This file is sourced at runtime to configure zestty. All of the following values are also configurable via environment variable, which take precendence over the configuration file.
 
 #### Delimiters
-- `ZESTTY_DELIM`: single character, changes the delimiter zestty uses when listing and sessionizing sessions (default ':').
-- `ZESTTY_PROJECT_DELIM`: single character, changes the delimiter zestty uses to split lines in the projects file (default ':').
+- `ZESTTY_DELIM`: single character, changes the delimiter zestty uses when listing and sessionizing sessions (default ":").
+- `ZESTTY_PROJECT_DELIM`: single character, changes the delimiter zestty uses to split lines in the projects file (default ":").
 
 #### Plugin URL
 - `ZESTTY_PLUGIN_URL`: changes the plugin location zestty uses when communicating with the zestty plugin.
     - follows the zellij convention for plugin URLs
-    - defaults to 'https://github.com/aidantlynch00/zestty/releases/latest/download/zestty.wasm'
+    - defaults to "https://github.com/aidantlynch00/zestty/releases/latest/download/zestty.wasm"
 
 > [!TIP]
 > Download the zestty plugin and change `ZESTTY_PLUGIN_URL` to point to your local copy!
+
+#### Default Layout
+zestty cannot detect the default layout set in your zellij configuration.
+
+- `ZESTTY_DEFAULT_LAYOUT`: changes the layout zestty defaults to if no layout is specified (default "default")
+    - can be a bare name, a file path, or a URL
 
 ## Installation
 A minimal installation of zestty only requires you to download the [zestty script](https://github.com/aidantlynch00/zestty/releases/latest/download/zestty). Since zellij can download plugins over HTTP and cache them, by default zestty uses the latest release of the plugin hosted on GitHub. A prebuilt plugin binary or an archive of both the script and plugin binary can be downloaded on the [releases page](https://github.com/aidantlynch00/zestty/releases/latest).
