@@ -115,7 +115,7 @@ This file is sourced at runtime to configure zestty. All of the following values
 zestty cannot detect the default layout set in your zellij configuration.
 
 - `ZESTTY_DEFAULT_LAYOUT`: changes the layout zestty defaults to if no layout is specified (default "default")
-    - can be a bare name, a file path, or a URL
+    - can be a bare name, an absolute file path, or a URL
 
 ## Installation
 A minimal installation of zestty only requires you to download the [zestty script](https://github.com/aidantlynch00/zestty/releases/latest/download/zestty). Since zellij can download plugins over HTTP and cache them, by default zestty uses the latest release of the plugin hosted on GitHub. A prebuilt plugin binary or an archive of both the script and plugin binary can be downloaded on the [releases page](https://github.com/aidantlynch00/zestty/releases/latest).
