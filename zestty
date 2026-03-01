@@ -713,7 +713,6 @@ zestty_sessionize_worktree() {
 zestty_sessionize_submodule() {
     _su_name=${1:-}
     _su_path=${2:-}
-    _su_layout=""
 
     if [ -z "$_su_name" ]; then
         exit_fail "Submodule name required!"
@@ -741,7 +740,7 @@ zestty_sessionize_submodule() {
 
     _su_state=$(zestty_get_session_state "$_su_name")
     case "$_su_state" in
-        "dne") zestty_create "$_su_name" "$_su_path" "$_su_layout";;
+        "dne") zestty_create "$_su_name" "$_su_path";;
         "dead" | "active") zestty_attach "$_su_name";;
     esac
 }
