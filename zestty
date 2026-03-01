@@ -322,6 +322,8 @@ zestty_create() {
         _c_path=$(realpath "$_c_path")
     fi
 
+    _c_layout=$(zestty_resolve_layout "$_c_path" "$_c_layout")
+
     if [ "$ZELLIJ" = "0" ]; then
         zestty_call_switch_session \
             "$_c_name" \
@@ -657,17 +659,14 @@ zestty_sessionize_project() {
     fi
 
     _sp_state=$(zestty_get_session_state "$_sp_name")
-    if [ "$_sp_state" = "active" ]; then
-        zestty_attach "$_sp_name"
-        return
-    fi
-
-    if [ "$_sp_state" = "dead" ]; then
-        zellij delete-session "$_sp_name" > /dev/null
-    fi
-
-    _sp_layout=$(zestty_resolve_layout "$_sp_path" "$_sp_layout")
-    zestty_create "$_sp_name" "$_sp_path" "$_sp_layout"
+    case "$_sp_state" in
+        "dne") zestty_create "$_sp_name" "$_sp_abspath" "$_sp_layout";;
+        "dead")
+            zellij delete-session "$_sp_name" > /dev/null
+            zestty_create "$_sp_name" "$_sp_abspath" "$_sp_layout"
+            ;;
+        "active") zestty_attach "$_sp_name";;
+    esac
 }
 
 zestty_sessionize_worktree() {
