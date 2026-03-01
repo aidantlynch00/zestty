@@ -263,6 +263,30 @@ zestty_match_project_path() {
     done < "$_mpp_project_file"
 }
 
+zestty_resolve_layout() {
+    _rl_path=${1:-}
+    _rl_layout=${2:-}
+
+    if [ -n "$_rl_layout" ]; then
+        # check if layout is bare name
+        if echo "$_rl_layout" | grep -qv "\.kdl$"; then
+            _rl_layout_path="$_rl_path/$_rl_layout.zellij.kdl"
+            if [ -f "$_rl_layout_path" ]; then
+                echo "$_rl_layout_path"
+                return
+            fi
+        fi
+    else
+        _rl_layout_path="$_rl_path/layout.zellij.kdl"
+        if [ -f "$_rl_layout_path" ]; then
+            echo "$_rl_layout_path"
+            return
+        fi
+    fi
+
+    echo "$_rl_layout"
+}
+
 zestty_function_exists() {
     type -- "$1" 2> /dev/null | grep -q "function"
 }
@@ -633,14 +657,17 @@ zestty_sessionize_project() {
     fi
 
     _sp_state=$(zestty_get_session_state "$_sp_name")
-    case "$_sp_state" in
-        "dne") zestty_create "$_sp_name" "$_sp_abspath" "$_sp_layout";;
-        "dead")
-            zellij delete-session "$_sp_name" > /dev/null
-            zestty_create "$_sp_name" "$_sp_abspath" "$_sp_layout"
-            ;;
-        "active") zestty_attach "$_sp_name";;
-    esac
+    if [ "$_sp_state" = "active" ]; then
+        zestty_attach "$_sp_name"
+        return
+    fi
+
+    if [ "$_sp_state" = "dead" ]; then
+        zellij delete-session "$_sp_name" > /dev/null
+    fi
+
+    _sp_layout=$(zestty_resolve_layout "$_sp_path" "$_sp_layout")
+    zestty_create "$_sp_name" "$_sp_path" "$_sp_layout"
 }
 
 zestty_sessionize_worktree() {
