@@ -25,8 +25,14 @@ A POSIX-compliant shell script and accompanying zellij plugin for quickly moving
 > [!NOTE]
 > Use `zestty help` to see the full help text. Run each command with no arguments to print its help text.
 
-### Create and Attach
+### Create
 - `zestty create <name> [path] [layout]`: create a new session (works within a session)
+
+#### Smart Layouts
+- If the layout is a bare name, zestty first looks for a `[layout].zellij.kdl` layout file under the path. Otherwise, the layout is used as passed.
+- If no layout is specified, zestty looks for a `layout.zellij.kdl` file under the path before falling back to the configured default layout.
+
+### Attach
 - `zestty attach <name>`: attach to an existing session (works within a session)
 
 ### Picking Sessions
@@ -88,11 +94,14 @@ zestty is project-centric and employs a few tricks to make sessionizing feel sma
 ## Configuration
 
 ### Projects
-zestty does not scan your filesystem to find projects. Instead, you are expected to maintain a list of your projects, their locations, and optionally a zellij layout to apply when creating the session. Each line should be in the following format `name:path:layout` (example: `zestty:~/projects/zestty:edit-and-git`).
+zestty does not scan your filesystem to find projects. Instead, you are expected to maintain a list of your projects, their locations, and optionally a layout to apply when creating the session. Each line should be in the following format `name:path:layout` (example: `zestty:~/projects/zestty:edit-and-git`).
 
 zestty looks in the following locations for a projects file:
 1. ~/.config/zestty/projects
 2. /etc/zestty/projects
+
+> [!TIP]
+> Use [smart layouts](#smart-layouts) to keep your project layouts under the root of the project.
 
 ### Config File
 zestty looks in the following locations for a configuration file:

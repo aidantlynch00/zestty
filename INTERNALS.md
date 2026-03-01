@@ -13,9 +13,11 @@
 
 | Function | Inputs | Outputs | Description |
 |----------|--------|---------|-------------|
+| `zestty_canonicalize_path` | Path | Canonicalized path | Replaces a leading `~` with `$HOME` and canonicalizes the path. |
 | `zestty_find_file_in_order` | File paths | First existing readable file path | Searches for files in order and returns the first readable one. |
 | `zestty_find_config_file` | N/A | Config file path or empty | Finds zestty configuration file if it exists. |
 | `zestty_find_project_file` | N/A | Projects file path or empty | Finds zestty projects file if it exists. |
+| `zestty_resolve_layout` | `1`: path<br>`2`: layout (optional) | Local layout path or passed layout | If layout is a bare name, outputs `"$path/$layout.zellij.kdl` if the file exists. If no layout, outputs `$path/layout.zellij.kdl` if the file exists. Otherwise, outputs the layout unchanged. |
 | `zestty_function_exists` | `1`: function name | Exit code 0 if it exists, 1 otherwise | Checks if a function with the given name is defined in the current shell environment. |
 | `zestty_get_session_state` | `1`: session name | One of `active`, `dead`, or `dne` (does not exist) | Checks if a zellij session exists and returns its state. |
 | `zestty_call_switch_session` | `1`: name<br>`2`: path (optional)<br>`3`: layout (optional) | N/A | Pipes message to plugin to switch/create session inside an existing zellij session. |
