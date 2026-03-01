@@ -127,6 +127,14 @@ $(bold "ZESTTY_DEFAULT_LAYOUT")   "$ZESTTY_DEFAULT_LAYOUT"
 EOF
 }
 
+zestty_canonicalize_path() {
+    _cp_path=${1:-}
+    [ -z "$_cp_path" ] && return
+
+    _cp_path=$(echo "$_cp_path" | sed "s|^~|$HOME|")
+    realpath --canonicalize-missing "$_cp_path"
+}
+
 zestty_find_file_in_order() {
     for _ffio_file in "$@"; do
         if [ -f "$_ffio_file" ] && [ -r "$_ffio_file" ]; then
@@ -235,21 +243,18 @@ zestty_match_project_name() {
 }
 
 zestty_match_project_path() {
-    _mpp_expected_relpath=${1:-}
-    [ -z "$_mpp_expected_relpath" ] && return
-
-    _mpp_expected_relpath=$(echo "$_mpp_expected_relpath" | sed "s|^~|$HOME|")
-    _mpp_expected_abspath=$(realpath "$_mpp_expected_relpath")
+    _mpp_expected_path=${1:-}
+    [ -z "$_mpp_expected_path" ] && return
 
     _mpp_project_file=$(zestty_find_project_file)
     [ -z "$_mpp_project_file" ] && return
 
+    _mpp_expected_path=$(zestty_canonicalize_path "$_mpp_expected_path")
     while read -r _mpp_project; do
-        _mpp_actual_relpath=$(echo "$_mpp_project" | cut -d "$ZESTTY_PROJECT_DELIM" -f "2")
-        _mpp_actual_relpath=$(echo "$_mpp_actual_relpath" | sed "s|^~|$HOME|")
-        _mpp_actual_abspath=$(realpath "$_mpp_actual_relpath")
+        _mpp_actual_path=$(echo "$_mpp_project" | cut -d "$ZESTTY_PROJECT_DELIM" -f "2")
+        _mpp_actual_path=$(zestty_canonicalize_path "$_mpp_actual_path")
 
-        if [ "$_mpp_expected_abspath" = "$_mpp_actual_abspath" ]; then
+        if [ "$_mpp_expected_path" = "$_mpp_actual_path" ]; then
             echo "$_mpp_project" |
             sed -e "s/$ZESTTY_PROJECT_DELIM/$ZESTTY_DELIM/g" \
                 -e "s/^/project$ZESTTY_DELIM/"
@@ -622,9 +627,8 @@ zestty_sessionize_project() {
         exit_fail "Project path required!"
     fi
 
-    _sp_abspath=$(echo "$_sp_path" | sed "s|^~|$HOME|")
-    _sp_abspath=$(realpath "$_sp_abspath")
-    if ! [ -d "$_sp_abspath" ]; then
+    _sp_path=$(zestty_canonicalize_path "$_sp_path")
+    if ! [ -d "$_sp_path" ]; then
         exit_fail "Project path must be a directory!"
     fi
 
