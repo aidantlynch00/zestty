@@ -298,9 +298,8 @@ zestty_create() {
             zestty_create_usage
     fi
 
-    _c_cwd=$ZESTTY_CWD
     _c_name="$1"
-    _c_path=${2:-"$_c_cwd"}
+    _c_path=${2:-"$ZESTTY_CWD"}
     _c_layout=${3:-}
 
     case "$_c_name" in
@@ -316,10 +315,9 @@ zestty_create() {
             zestty_attach_usage
     fi
 
+    _c_path=$(zestty_canonicalize_path "$_c_path")
     if ! [ -d "$_c_path" ]; then
         exit_fail "'$_c_path' is not a directory!"
-    else
-        _c_path=$(realpath "$_c_path")
     fi
 
     _c_layout=$(zestty_resolve_layout "$_c_path" "$_c_layout")
@@ -347,7 +345,7 @@ zestty_create() {
                 --new-session-with-layout "$ZESTTY_DEFAULT_LAYOUT"
         fi
 
-        cd "$_c_cwd"
+        cd "$ZESTTY_CWD"
     fi
 }
 
@@ -651,11 +649,6 @@ zestty_sessionize_project() {
         exit_fail "Project name required!"
     elif [ -z "$_sp_path" ]; then
         exit_fail "Project path required!"
-    fi
-
-    _sp_path=$(zestty_canonicalize_path "$_sp_path")
-    if ! [ -d "$_sp_path" ]; then
-        exit_fail "Project path must be a directory!"
     fi
 
     _sp_state=$(zestty_get_session_state "$_sp_name")
