@@ -41,6 +41,7 @@ usage: zestty <command>
 $(bold "Available commands")
 help        print this message
 config      print the current zestty configuration
+add         add a new project to the projects file
 create      create a zellij session with a name, layout, and working directory
 attach      attach to an existing zellij session
 pick        pick from lists and sessionize
@@ -150,9 +151,10 @@ zestty_find_config_file() {
         "/etc/zestty/config"
 }
 
+ZESTTY_DEFAULT_PROJECT_FILE="$HOME/.config/zestty/projects"
 zestty_find_project_file() {
     zestty_find_file_in_order \
-        "$HOME/.config/zestty/projects" \
+        "$ZESTTY_DEFAULT_PROJECT_FILE" \
         "/etc/zestty/projects"
 }
 
@@ -289,6 +291,32 @@ zestty_resolve_layout() {
 
 zestty_function_exists() {
     type -- "$1" 2> /dev/null | grep -q "function"
+}
+
+zestty_add() {
+    _a_project_file=$(zestty_find_project_file)
+    if [ -z "$_a_project_file" ]; then
+        _a_project_file="$ZESTTY_DEFAULT_PROJECT_FILE"
+    fi
+
+    printf "Name: "
+    read -r _a_name
+    if grep -q "^${_a_name}${ZESTTY_PROJECT_DELIM}" "$_a_project_file"; then
+        exit_fail "'$_a_name' is already a configured project!"
+    fi
+
+    printf "Path: "
+    read -r _a_path
+    _a_path=$(zestty_canonicalize_path "$_a_path")
+    if ! [ -d "$_a_path" ]; then
+        exit_fail "'$_a_path' is not a directory!"
+    fi
+
+    printf "Layout (optional): "
+    read -r _a_layout
+
+    echo "${_a_name}${ZESTTY_PROJECT_DELIM}${_a_path}${ZESTTY_PROJECT_DELIM}${_a_layout}" \
+        >> "$_a_project_file"
 }
 
 zestty_create() {
@@ -835,6 +863,7 @@ ZESTTY_DEFAULT_LAYOUT=${ZESTTY_DEFAULT_LAYOUT:-"default"}
 case "$_z_command" in
     "-?" | "-h" | "--help" | "h" | "help") zestty_usage;;
     "config") zestty_config;;
+    "add") zestty_add;;
     "c" | "create") zestty_create "$@";;
     "a" | "attach") zestty_attach "$@";;
     "p" | "pick") zestty_pick "$@";;
