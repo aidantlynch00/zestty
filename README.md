@@ -29,7 +29,7 @@ A POSIX-compliant shell script and accompanying zellij plugin for quickly moving
 - `zestty create <name> [path] [layout]`: create a new session (works within a session)
 
 #### Smart Layouts
-- If the layout is a bare name, zestty first looks for a `[layout].zellij.kdl` layout file under the path. Otherwise, the layout is used as passed.
+- If the layout is a bare name, zestty first looks for a `[layout].zellij.kdl` layout file under the path. If the file exists it is used, otherwise the layout is unchanged.
 - If no layout is specified, zestty looks for a `layout.zellij.kdl` file under the path before falling back to the configured default layout.
 
 ### Attach
