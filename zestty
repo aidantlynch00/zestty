@@ -53,6 +53,17 @@ back        cycle back to the last session
 EOF
 }
 
+zestty_add_usage() {
+    cat <<EOF
+usage: zestty add [name] [path] [layout]
+
+$(bold "Parameters")
+name        name of the session
+path        working directory for the session, defaults to current directory
+layout      name of the layout to use, configured default layout if not provided
+EOF
+}
+
 zestty_create_usage() {
     cat <<EOF
 usage: zestty create <name> [path] [layout]
@@ -294,27 +305,48 @@ zestty_function_exists() {
 }
 
 zestty_add() {
+    if [ "$#" -ge "1" ]; then
+        case "$1" in
+            "-?" | "-h" | "--help")
+                zestty_add_usage
+                exit_success
+                ;;
+        esac
+    fi
+
+    _a_name=${1:-}
+    _a_path=${2:-}
+    _a_layout=${3:-}
+
     _a_project_file=$(zestty_find_project_file)
     if [ -z "$_a_project_file" ]; then
         _a_project_file="$ZESTTY_DEFAULT_PROJECT_FILE"
     fi
 
-    printf "Name: "
-    read -r _a_name
+    if [ -z "$_a_name" ]; then
+        printf "Name: "
+        read -r _a_name
+    fi
+
     if grep -q "^${_a_name}${ZESTTY_PROJECT_DELIM}" "$_a_project_file"; then
         exit_fail "'$_a_name' is already a configured project!"
     fi
 
-    printf "Path (defaults to current directory): "
-    read -r _a_path
-    [ -z "$_a_path" ] && _a_path=$ZESTTY_CWD
+    if [ -z "$_a_path" ]; then
+        printf "Path (defaults to current directory): "
+        read -r _a_path
+        [ -z "$_a_path" ] && _a_path=$ZESTTY_CWD
+    fi
+
     _a_path=$(zestty_canonicalize_path "$_a_path")
     if ! [ -d "$_a_path" ]; then
         exit_fail "'$_a_path' is not a directory!"
     fi
 
-    printf "Layout (optional): "
-    read -r _a_layout
+    if [ -z "$_a_layout" ]; then
+        printf "Layout (optional): "
+        read -r _a_layout
+    fi
 
     echo "${_a_name}${ZESTTY_PROJECT_DELIM}${_a_path}${ZESTTY_PROJECT_DELIM}${_a_layout}" \
         >> "$_a_project_file"
@@ -864,7 +896,7 @@ ZESTTY_DEFAULT_LAYOUT=${ZESTTY_DEFAULT_LAYOUT:-"default"}
 case "$_z_command" in
     "-?" | "-h" | "--help" | "h" | "help") zestty_usage;;
     "config") zestty_config;;
-    "add") zestty_add;;
+    "add") zestty_add "$@";;
     "c" | "create") zestty_create "$@";;
     "a" | "attach") zestty_attach "$@";;
     "p" | "pick") zestty_pick "$@";;
