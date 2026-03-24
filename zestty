@@ -305,8 +305,9 @@ zestty_add() {
         exit_fail "'$_a_name' is already a configured project!"
     fi
 
-    printf "Path: "
+    printf "Path (defaults to current directory): "
     read -r _a_path
+    [ -z "$_a_path" ] && _a_path=$ZESTTY_CWD
     _a_path=$(zestty_canonicalize_path "$_a_path")
     if ! [ -d "$_a_path" ]; then
         exit_fail "'$_a_path' is not a directory!"
