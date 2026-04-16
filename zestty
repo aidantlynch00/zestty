@@ -42,6 +42,7 @@ $(bold "Available commands")
 help        print this message
 config      print the current zestty configuration
 add         add a new project to the projects file
+remove      remove a project from the projects file
 create      create a zellij session with a name, layout, and working directory
 attach      attach to an existing zellij session
 pick        pick from lists and sessionize
@@ -58,9 +59,18 @@ zestty_add_usage() {
 usage: zestty add [name] [path] [layout]
 
 $(bold "Parameters")
-name        name of the session
+name        name of the project
 path        working directory for the session, defaults to current directory
 layout      name of the layout to use, configured default layout if not provided
+EOF
+}
+
+zestty_remove_usage() {
+    cat <<EOF
+usage: zestty remove [name]
+
+$(bold "Parameters")
+name        name of the project
 EOF
 }
 
@@ -350,6 +360,35 @@ zestty_add() {
 
     echo "${_a_name}${ZESTTY_PROJECT_DELIM}${_a_path}${ZESTTY_PROJECT_DELIM}${_a_layout}" \
         >> "$_a_project_file"
+}
+
+zestty_remove() {
+    if [ "$#" -lt "1" ]; then
+        exit_fail_with_usage \
+            "Session name required!" \
+            zestty_remove_usage
+    else
+        case "$1" in
+            "-?" | "-h" | "--help")
+                zestty_remove_usage
+                exit_success
+                ;;
+        esac
+    fi
+
+    _r_name=${1:-}
+    _r_project_file=$(zestty_find_project_file)
+    if [ -z "$_r_project_file" ]; then
+        exit_fail "Project file required!"
+    fi
+
+    _r_pattern="${_r_name}${ZESTTY_PROJECT_DELIM}"
+    if grep -q "$_r_pattern" "$_r_project_file"; then
+        sed -i "/^$_r_pattern/d" "$_r_project_file"
+        exit_success "Project '$_r_name' removed"
+    else
+        exit_fail "Could not find project '$_r_name'!"
+    fi
 }
 
 zestty_create() {
@@ -897,6 +936,7 @@ case "$_z_command" in
     "-?" | "-h" | "--help" | "h" | "help") zestty_usage;;
     "config") zestty_config;;
     "add") zestty_add "$@";;
+    "remove") zestty_remove "$@";;
     "c" | "create") zestty_create "$@";;
     "a" | "attach") zestty_attach "$@";;
     "p" | "pick") zestty_pick "$@";;
