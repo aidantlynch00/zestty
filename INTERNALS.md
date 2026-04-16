@@ -20,7 +20,7 @@
 | `zestty_resolve_layout` | `1`: path<br>`2`: layout (optional) | Local layout path or passed layout | If layout is a bare name, outputs `"$path/$layout.zellij.kdl` if the file exists. If no layout, outputs `$path/layout.zellij.kdl` if the file exists. Otherwise, outputs the layout unchanged. |
 | `zestty_function_exists` | `1`: function name | Exit code 0 if it exists, 1 otherwise | Checks if a function with the given name is defined in the current shell environment. |
 | `zestty_get_session_state` | `1`: session name | One of `active`, `dead`, or `dne` (does not exist) | Checks if a zellij session exists and returns its state. |
-| `zestty_call_switch_session` | `1`: name<br>`2`: path (optional)<br>`3`: layout (optional) | N/A | Pipes message to plugin to switch/create session inside an existing zellij session. |
+| `zestty_call_switch_session` | `1`: name (optional)<br>`2`: path (optional)<br>`3`: layout (optional) | N/A | Pipes message to plugin to switch/create session inside an existing zellij session. |
 | `zestty_match_project_name` | `1`: project name | Project item or empty | Looks up project by name in projects file. |
 | `zestty_match_project_path` | `1`: project path | Project item or empty | Looks up project by path in projects file. |
 | `zestty_add` | `1`: project name (optional)<br>`2`: project path (optional)<br>`3`: layout (optional) | N/A | Adds a project to the projects file, accepting user input if arguments are not provided |

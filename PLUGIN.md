@@ -24,7 +24,7 @@ Creates or switches to a session by name with an optional working directory and 
 ```
 
 **Parameters:**
-- `name` (required): Session name to switch to or create
+- `name` (optional): Session name to switch to or create. A name is generated if one is not provided.
 - `path` (optional): Working directory for the session
 - `layout` (optional): Layout to use, defaults to "default"
     - can be a bare name, an absolute file path, or a URL
