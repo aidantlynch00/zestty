@@ -363,11 +363,7 @@ zestty_add() {
 }
 
 zestty_remove() {
-    if [ "$#" -lt "1" ]; then
-        exit_fail_with_usage \
-            "Session name required!" \
-            zestty_remove_usage
-    else
+    if [ "$#" -ge "1" ]; then
         case "$1" in
             "-?" | "-h" | "--help")
                 zestty_remove_usage
@@ -376,10 +372,15 @@ zestty_remove() {
         esac
     fi
 
-    _r_name=${1:-}
     _r_project_file=$(zestty_find_project_file)
     if [ -z "$_r_project_file" ]; then
         exit_fail "Project file required!"
+    fi
+
+    _r_name=${1:-}
+    if [ -z "$_r_name" ]; then
+        printf "Name: "
+        read -r _r_name
     fi
 
     _r_pattern="${_r_name}${ZESTTY_PROJECT_DELIM}"
