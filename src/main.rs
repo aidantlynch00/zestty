@@ -46,7 +46,7 @@ register_plugin!(Zestty);
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SwitchSessionArgs {
-    name: String,
+    name: Option<String>,
     path: Option<String>,
     layout: Option<String>,
 }
@@ -236,6 +236,8 @@ impl Zestty {
         tracing::debug!("switching session with args {:?}", args);
         let SwitchSessionArgs { name, path, layout } = args;
 
+        // TODO: replace default string with generated
+        let name = name.unwrap_or_else(String::default);
         let cwd = path.map(PathBuf::from);
         let layout = self.determine_layout(layout);
 

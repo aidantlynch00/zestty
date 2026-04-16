@@ -226,15 +226,15 @@ zestty_call_add_session_to_cycle() {
 }
 
 zestty_call_switch_session() {
-    if [ "$#" -lt "1" ]; then
-        exit_fail "Session name required!"
-    fi
-
-    _cs_name="$1"
+    _cs_name=${1:-}
     _cs_path=${2:-}
     _cs_layout=${3:-}
 
-    _cs_options="{ \"command\": \"switch-session\", \"name\": \"$_cs_name\""
+    _cs_options="{ \"command\": \"switch-session\""
+    if [ -n "$_cs_name" ]; then
+        _cs_options="$_cs_options, \"name\": \"$_cs_name\""
+    fi
+
     if [ -n "$_cs_path" ] && [ -d "$_cs_path" ]; then
         _cs_options="$_cs_options, \"path\": \"$_cs_path\""
     fi
