@@ -24,6 +24,7 @@
 | `zestty_match_project_name` | `1`: project name | Project item or empty | Looks up project by name in projects file. |
 | `zestty_match_project_path` | `1`: project path | Project item or empty | Looks up project by path in projects file. |
 | `zestty_add` | `1`: project name (optional)<br>`2`: project path (optional)<br>`3`: layout (optional) | N/A | Adds a project to the projects file, accepting user input if arguments are not provided |
+| `zestty_remove` | `1`: project name (optional) | N/A | Removes a project from the projects file, accepting user input if argument is not provided |
 | `zestty_create` | `1`: name<br>`2`: path (optional)<br>`3`: layout (optional) | N/A | Creates a new zellij session with specified parameters. |
 | `zestty_attach` | `1`: session name | N/A | Attaches to an existing zellij session. |
 | `zestty_list_active` | N/A | Active session items | Lists all active zellij sessions. |

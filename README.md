@@ -105,6 +105,7 @@ zestty looks in the following locations for a projects file:
 
 #### Helper Command
 - `zestty add [name] [path] [layout]`: Add a project to the projects file. Accepts user input if arguments are not provided.
+- `zestty remove [name]`: Remove a project from the projects file. Accepts user input if argument is not provided.
 
 ### Config File
 zestty looks in the following locations for a configuration file:
