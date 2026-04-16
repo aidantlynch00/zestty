@@ -225,7 +225,8 @@ impl Zestty {
     #[tracing::instrument(skip_all)]
     fn add_session_to_cycle(&mut self) {
         // SAFETY: we have the session list and one must be active
-        let session_name = self.find_session().unwrap();
+        let session_name = self.find_session()
+            .expect("could not find current session");
 
         // update cycle
         self.cycle.push(session_name);
@@ -242,7 +243,7 @@ impl Zestty {
         let layout = self.determine_layout(layout);
 
         // add the session to the cycle
-        self.cycle.push(name.clone());
+        self.cycle.push(&name);
 
         switch_session_with_layout(Some(&name), layout, cwd);
     }
@@ -341,9 +342,12 @@ impl Zestty {
     }
 
     #[tracing::instrument(skip_all)]
-    fn determine_layout(&self, layout: Option<String>) -> LayoutInfo {
+    fn determine_layout<S>(&self, layout: Option<S>) -> LayoutInfo
+        where S: Into<String>
+    {
         // use or_else's to avoid unnecessary allocations
-        let layout = layout.map(to_layout_info)
+        let layout = layout.map(Into::into)
+            .map(to_layout_info)
             .or_else(|| self.default_layout.clone())
             .unwrap_or_else(|| LayoutInfo::File(String::from("default")));
 
