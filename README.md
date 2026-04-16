@@ -103,6 +103,9 @@ zestty looks in the following locations for a projects file:
 > [!TIP]
 > Use [smart layouts](#smart-layouts) to keep your project layouts under the root of the project.
 
+#### Helper Command
+- `zestty add [name] [path] [layout]`: Add a project to the projects file. Accepts user input if arguments are not provided.
+
 ### Config File
 zestty looks in the following locations for a configuration file:
 1. ~/.config/zestty/config
