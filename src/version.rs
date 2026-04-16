@@ -11,7 +11,7 @@ pub struct CompatibilityInfo {
 impl CompatibilityInfo {
     pub const fn new(version: Option<SemanticVersion>) -> Self {
         Self {
-            min_version: SemanticVersion::new(0, 40, 0),
+            min_version: SemanticVersion::new(0, 44, 0),
             actual_version: version,
         }
     }
