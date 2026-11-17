@@ -5,9 +5,12 @@ set -e
 
 if [ -n "$1" ] && [ "$1" = "release" ]; then
     cargo build --release --features tracing
-    zellij plugin --skip-plugin-cache -- file:target/wasm32-wasip1/release/zestty.wasm
+    # zellij plugin --skip-plugin-cache -- file:target/wasm32-wasip1/release/zestty.wasm
+    cp target/wasm32-wasip1/release/zestty.wasm ~/.tool-bin/wasm/zestty.wasm
 else
     cargo build --features tracing
-    zellij plugin --skip-plugin-cache -- file:target/wasm32-wasip1/debug/zestty.wasm
+    # zellij plugin --skip-plugin-cache -- file:target/wasm32-wasip1/debug/zestty.wasm
+    cp target/wasm32-wasip1/debug/zestty.wasm ~/.tool-bin/wasm/zestty.wasm
 fi
 
+cp zestty ~/.tool-bin/current/bin/zestty

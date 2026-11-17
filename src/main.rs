@@ -34,11 +34,11 @@ pub fn init_tracing() {
 #[derive(Default)]
 struct Zestty {
     compat_info: CompatibilityInfo,
+    configuration: BTreeMap<String, String>,
     buffered_events: Vec<Event>,
     buffered_command: Option<Command>,
     permission_granted: Option<bool>,
     sessions: Option<Vec<SessionInfo>>,
-    default_layout: Option<LayoutInfo>,
     cycle: SessionCycle,
 }
 
@@ -64,7 +64,7 @@ enum Command {
 
 impl ZellijPlugin for Zestty {
     #[tracing::instrument(skip_all)]
-    fn load(&mut self, mut configuration: BTreeMap<String, String>) {
+    fn load(&mut self, configuration: BTreeMap<String, String>) {
         #[cfg(feature = "tracing")]
         init_tracing();
         tracing::debug!("tracing initialized");
@@ -97,9 +97,7 @@ impl ZellijPlugin for Zestty {
         tracing::info!("requested permissions {:?}", permissions);
 
         // take from map to avoid allocation
-        self.default_layout = configuration
-            .remove("default_layout")
-            .map(to_layout_info);
+        self.configuration = configuration;
     }
 
     #[tracing::instrument(skip_all)]
@@ -341,13 +339,26 @@ impl Zestty {
 
     #[tracing::instrument(skip_all)]
     fn determine_layout(&self, layout: Option<String>) -> LayoutInfo {
+        let test1 = PathBuf::from("/home/alynch/.config/zellij/layouts/default");
+        let test2 = PathBuf::from("/home/alynch/.config/zellij/layouts/default").with_extension("kdl");
+        tracing::debug!("test1: {:?}", test1.exists());
+        tracing::debug!("test2 path: {:?}", test2);
+        tracing::debug!("test2: {:?}", test2.exists());
         // use or_else's to avoid unnecessary allocations
         let layout = layout.map(to_layout_info)
-            .or_else(|| self.default_layout.clone())
-            .unwrap_or_else(|| LayoutInfo::File(String::from("default")));
+            .or_else(|| self.default_layout())
+            .unwrap_or_else(default_builtin_layout);
 
         tracing::debug!("determined layout: {:?}", layout);
         return layout;
+    }
+
+    #[tracing::instrument(skip_all)]
+    fn default_layout(&self) -> Option<LayoutInfo> {
+        self.configuration
+            .get("default_layout")
+            .map(Clone::clone)
+            .map(to_layout_info)
     }
 
     fn find_session(&self) -> Option<String> {
@@ -361,17 +372,26 @@ impl Zestty {
     }
 }
 
+fn default_builtin_layout() -> LayoutInfo {
+    LayoutInfo::BuiltIn(String::from("default"))
+}
+
+#[tracing::instrument]
 fn to_layout_info(layout: String) -> LayoutInfo {
-    if let Some(builtin) = layout.strip_prefix("zellij:") {
-        LayoutInfo::BuiltIn(builtin.to_string())
-    }
-    else if layout.starts_with("http:") || layout.starts_with("https:") {
-        LayoutInfo::Url(layout)
+    let layout_dir = get_layout_dir();
+    let layout_dir = if layout_dir.is_empty() {
+        None
     }
     else {
-        match layout.strip_prefix("file:") {
-            Some(file) => LayoutInfo::File(file.to_string()),
-            None => LayoutInfo::File(layout),
-        }
-    }
+        Some(PathBuf::from(layout_dir))
+    };
+
+    tracing::debug!("layout directory: {:?}", layout_dir);
+    tracing::debug!("layout: {}", layout);
+
+    let layout = Some(PathBuf::from(layout));
+    let layout = LayoutInfo::from_config(&layout_dir, &layout);
+
+    tracing::debug!("layout: {:?}", layout);
+    layout.unwrap_or_else(default_builtin_layout)
 }
